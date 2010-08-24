@@ -6,6 +6,7 @@
   (:export
      #:basic-template
      #:list-template
+     #:menu-template
      #:template.load
      #:view
      )
@@ -17,11 +18,11 @@
 ;;; Templates
 ;;; ~~~~~~~~~
 
-(defparameter *patch-section-slot-format* "{{slot:patch-section=~a}}")
+;(defparameter *patch-section-slot-format* "{{slot:patch-section=~a}}")
 (defparameter *slot-regex* "\\{\\{slot:([^\\}]+)\\}\\}")
 (defparameter *section-regex*
   (cl-ppcre::create-scanner '(:sequence "{{section:"
-                                        (:register (:greedy-repetition 0 nil (:inverted-char-class #\})))
+                                        (:register (:non-greedy-repetition 0 nil :everything))
                                         "}}"
                                         (:regex "\\s*")
                                         (:register (:non-greedy-repetition 0 nil :everything))
@@ -29,6 +30,7 @@
                                         "{{/section}}"
                               )
                             :single-line-mode t))
+(defparameter *separate-section-name-params-regex* "\\?")
 (defparameter *comment-regex* (cl-ppcre::create-scanner '(:sequence "{0y0}"
                                                                     (:non-greedy-repetition 0 nil :everything)
                                                                     "{-y-}"
@@ -76,41 +78,6 @@
 ;;; Templates
 ;;; ~~~~~~~~~
 
-(defclass basic-template ()
-  (
-   (markup :initform ""
-           :initarg :markup
-           :accessor markup)
-   ))
-
-(defclass sections-template (basic-template)
-  (
-   (sections :initform nil
-             :accessor sections)
-   ))
-
-(defclass list-template (sections-template)
-  (
-   ))
-
-(defmethod initialize-instance :after ((template basic-template) &key)
-  (setf (markup template)
-        (cl-ppcre::regex-replace-all *comment-regex*
-                                     (markup template)
-                                     "")))
-
-(defmethod initialize-instance :after ((template sections-template) &key)
-  (setf (markup template)
-        (cl-ppcre::regex-replace-all *section-regex*
-                                     (markup template)
-                                     (lambda (match alias content &rest registers)
-                                       (declare (ignorable match alias content registers))
-                                       (setf (getf (sections template)
-                                                   (dc.utils:string->keyword alias))
-                                             content)
-                                       (format nil *patch-section-slot-format* alias))
-                                     :simple-calls t)))
-
 (defmacro template.load (template pathname)
   `(make-instance ',template
                   :markup (dc.utils:pathname->string ,pathname)))
@@ -124,49 +91,142 @@
                                :simple-calls t
                                ))
 
+;; Basic
+
+(defclass basic-template ()
+  (
+   (markup :initform ""
+           :initarg :markup
+           :accessor markup)
+   ))
+
+(defmethod initialize-instance :after ((template basic-template) &key)
+  (setf (markup template)
+        (cl-ppcre::regex-replace-all *comment-regex* (markup template) "")))
+
 (defgeneric view (template &optional data))
 
 (defmethod view ((template basic-template) &optional (data nil))
   (patch-slots (markup template) data))
 
+;; Sections
+
+(defclass sections-template (basic-template)
+  (
+   (sections :initform nil
+             :accessor sections)
+   ))
+
+(defclass section ()
+  (
+   (alias :initarg :alias
+          :reader alias
+          )
+   (params :initarg :params
+           :initform nil
+           :accessor params
+           )
+   (template :initarg :template
+             :reader template
+             )
+   ))
+
+(defun decode-section-params (string-source)
+  (let (params)
+    (loop for token in (cl-ppcre::split "&" string-source)
+       do (destructuring-bind (key value)
+              (cl-ppcre::split "=" token :limit 2)
+            (setf (getf params (dc.utils:string->keyword key))
+                  value)))
+    params))
+
+(defmethod initialize-instance :after ((template sections-template) &key)
+  (setf (markup template)
+        (cl-ppcre::regex-replace-all *section-regex*
+                                     (markup template)
+                                     (lambda (match alias content &rest registers)
+                                       (declare (ignore match registers))
+                                       (destructuring-bind (alias &optional (params nil))
+                                           (cl-ppcre::split "\\?" alias :limit 2)
+                                         (let ((alias (dc.utils:string->keyword alias)))
+                                           (push (make-instance 'section
+                                                                :alias alias
+                                                                :params (decode-section-params params)
+                                                                :template (make-instance 'basic-template
+                                                                                         :markup content
+                                                                                         )
+                                                                )
+                                                 (sections template))))
+                                       "")
+                                     :simple-calls t)))
+
+;(defun count-plist-similarity (pl1 pl2)
+;  (apply #'+ (mapcar
+
+(defmethod section ((template sections-template) alias &key (params nil))
+  (first (sort (remove alias (sections template)
+                       :key #'alias
+                       :test-not #'eql)
+               #'< :key (lambda (section)
+                          (if (equal params (params section))
+                              0
+                              (length (params section)))))))
+
+;; List
+
+(defclass list-template (sections-template)
+  (
+   ))
+
+;(dc.utils:pizdec item-section)
+(defgeneric item-section (list-template &key))
+
+(defmethod item-section ((template list-template) &key item-number)
+  (section template :item
+           :params (cond
+                     ((evenp item-number) (list :predicate "even"))
+                     ((oddp item-number) (list :predicate "odd"))
+                     (t nil)
+                     )))
+
+(defgeneric items-templates (list-template &optional list))
+
+(defmethod items-templates ((template list-template) &optional (list nil))
+  (mapcar #'template
+          (loop for i from 1 upto (length list)
+             collect (item-section template
+                                   :item-number i))))
+
 (defmethod view ((template list-template) &optional (list nil))
-  (let ((items (loop
-                   for record in list
-                   collect (patch-slots (getf (sections template) :item)
-                                        record))))
+  (let* ((items-templates (items-templates template list))
+         (items (mapcar (lambda (item-template record)
+                          (view item-template record))
+                        items-templates list)))
     (if (plusp (length items))
         (patch-slots (markup template)
-                     (list :patch-section=item (apply #'dc.utils:join items)
-                           :patch-section=empty ""))
-        (getf (sections template) :empty))))
+                     (list :items (apply #'dc.utils:join items)))
+        (view (template (section template :empty))))))
 
-;(defun parse-template-sections (source)
-;  (let* ((sections nil)
-;         (canvas (cl-ppcre::regex-replace-all *regex-section*
-;                                              source
-;                                              (lambda (match alias content &rest registers)
-;                                                (declare (ignorable match alias content registers))
-;                                                (setf (getf sections (dc.utils:string->keyword alias)) content)
-;                                                (format nil "{ins:section=~a}" alias))
-;                                              :simple-calls t
-;                                              )))
-;    (make-instance 'template-sections
-;                   :markup canvas
-;                   :sections sections)))
+;; Menu
 
-;(defun view-list (template list)
-;  (let* (
-;         (list-template (parse-template-sections template))
-;         (items (loop
-;                   for record in list
-;                   collect (view-record (getf (sections list-template) :item)
-;                                        record)))
-;         )
-;    (if (plusp (length items))
-;        (view-record (markup list-template)
-;                     (list :section=item (apply #'dc.utils:join items)
-;                           :section=empty ""))
-;        (getf (sections list-template) :empty))))
+(defclass menu-template (list-template)
+  (
+   ))
+
+(defmethod items-templates ((template menu-template) &optional (list nil))
+  (mapcar #'template
+          (loop for record in list
+             collect (item-section template
+                                   :is-current? (and (boundp 'hunchentoot::*request*)
+                                                     (string= (hunchentoot::url-decode
+                                                               (hunchentoot::request-uri hunchentoot::*request*))
+                                                              (getf record :url)))))))
+
+(defmethod item-section ((template menu-template) &key is-current?)
+  (section template :item
+           :params (if is-current?
+                       (list :mode "current")
+                       nil)))
 
 ;;; ~~~~~
 ;;; Views
