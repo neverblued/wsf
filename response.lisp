@@ -1,10 +1,58 @@
-(in-package #:dc.wsf)
+(in-package #:wsf)
+
+;;; ~~~~~~~~
+;;; Response
+;;; ~~~~~~~~
+
+(defclass response ()
+  (
+   (content-type :initform "text/plain"
+                 :initarg :content-type
+                 :accessor content-type
+                 )
+   (charset :initform :utf-8
+            :initarg :charset
+            :accessor charset
+            )
+   ))
+
+(defgeneric no-response (site))
+
+(defun sendable? (thing)
+  (typep thing 'response))
+
+(defparameter *response* nil)
+
+(defmethod respond :around ((site site) (request hunchentoot::request))
+  (let (*response*)
+    (declare (special *response*))
+    (call-next-method)
+    (send (if (sendable? *response*)
+              *response*
+              (no-response site)))))
+
+
+(defgeneric format-content-type (response))
+
+(defmethod send :before ((response response) &key)
+  (if (boundp 'hunchentoot::*reply*)
+      (setf (hunchentoot::content-type* hunchentoot::*reply*)
+            (format-content-type response)
+            hunchentoot::*hunchentoot-default-external-format*
+            (charset-instance (charset response)))
+      (print (content response))))
+
+(defmethod format-content-type ((response response))
+  (format nil "~a; charset=~a" (content-type response) (charset-string (charset response))))
+
+(defmethod content ((response response))
+  "Hello, world!")
 
 ;;; ~~~~~~~~~~~~~
 ;;; File Response
 ;;; ~~~~~~~~~~~~~
 
-(defclass file-response (site-response)
+(defclass file-response (response)
   (
    (file-path :initarg :file-path
               :accessor file-path
@@ -12,20 +60,22 @@
    ))
 
 (defmethod content-type ((response file-response))
-  (pathname->mime (file-path response)))
+  (mime<-pathname (file-path response)))
 
 (defmethod send ((response file-response) &key (binary t))
-  (pathname->string (file-path response) :binary binary))
+  (string<-pathname (file-path response) :binary binary))
 
 ;;; ~~~~~~~~~~~~~
 ;;; Text Response
 ;;; ~~~~~~~~~~~~~
 
-(defclass text-response (site-response)
+(defclass text-response (response)
   (
    (content-type :initform "text/plain"
                  )
    (content :initform "Hello, world! I am a WSF::TEXT-RESPONSE template content."
+            :initarg :content
+            :accessor content
             )
    ))
 
@@ -33,16 +83,12 @@
 ;;; HTML Response
 ;;; ~~~~~~~~~~~~~
 
-(defclass title-haver ()
+(defclass html-response (text-response)
   (
    (title :initform "&last; &last; &last;"
           :initarg :title
           :accessor title
           )
-   ))
-
-(defclass html-response (title-haver text-response)
-  (
    (content-type :initform "text/html"
                  )
    (content :initform "Hello, world! I am a WSF::HTML-RESPONSE template content."
@@ -111,28 +157,15 @@
                   (content (content ,response))
                   ))))
 
-;;; ~~~~~~~~~~~~~~~~~~
-;;; Template Responses
-;;; ~~~~~~~~~~~~~~~~~~
+;;; ~~~~~~~~~~~~~~~~~
+;;; Template Response
+;;; ~~~~~~~~~~~~~~~~~
 
-(defmethod response[test] ((site site))
+(defmethod no-response ((site site))
+  (declare (ignore site))
   (make-instance 'text-response
-                 ))
-
-(defmethod response[not-implemented] ((site site))
-  (make-instance 'text-response
-                 ;:headers '(
-                 :content (join "Unfortunately, the website is not implemented yet "
-                                "(reply #501).")
-                 ))
-
-(defmethod response[not-found] ((site site))
-  (make-instance 'text-response
-                 :content (join "Unfortunately, the website has no "
-                                "appropriate content for your request "
-                                "(reply #404)."
+                 :content (join "Unfortunately, the website has no"
+                                " appropriate content for your request"
+                                " (no-response)."
                                 )
                  ))
-
-(defun is-response? (x)
-  (and x (typep x 'site-response)))
