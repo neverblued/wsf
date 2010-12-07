@@ -107,7 +107,7 @@
   (format nil "<link rel='~a' type='~a' href='~a' />" rel type href))
 
 (defun build-html-link-style (path-base)
-  (build-html-link (join "/decore/css/" path-base ".css") :rel "stylesheet" :type "text/css"))
+  (build-html-link (join "/css/" path-base ".css") :rel "stylesheet" :type "text/css"))
 
 (defmethod build-html-style ((response html-response))
   (if (style response)
@@ -153,7 +153,7 @@
                                 "<!-- Scripts be here could, young Padawan! -->"
                                 ))
                   (title (title ,response))
-                  (favicon ,(build-html-link "/decore/favicon.ico" :rel "shortcut icon" :type "image/x-icon"))
+                  (favicon ,(build-html-link "/images/favicon.ico" :rel "shortcut icon" :type "image/x-icon"))
                   (content (content ,response))
                   ))))
 
