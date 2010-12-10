@@ -3,7 +3,7 @@
         #:dc-bin #:hunchentight #:rought)
   (:shadow #:*request*)
   (:export #:site #:site-port #:site-docroot #:from-docroot
-           #:mount #:site-route #:mount-route #:*response*
+           #:mount #:site-route #:mount-route #:*site-response* #:no-response
            #:file-response #:text-response #:html-response
            #:dongle-response #:empty-response #:test-response
            ))

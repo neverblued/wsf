@@ -16,20 +16,20 @@
             )
    ))
 
-(defgeneric no-response (site))
+(defgeneric no-response (site request))
 
 (defun sendable? (thing)
   (typep thing 'response))
 
-(defparameter *response* nil)
+(defparameter *site-response* nil)
 
 (defmethod respond :around ((site site) (request hunchentoot::request))
-  (let (*response*)
-    (declare (special *response*))
+  (let (*site-response*)
+    (declare (special *site-response*))
     (call-next-method)
-    (send (if (sendable? *response*)
-              *response*
-              (no-response site)))))
+    (send (if (sendable? *site-response*)
+              *site-response*
+              (no-response site request)))))
 
 
 (defgeneric format-content-type (response))
@@ -161,8 +161,8 @@
 ;;; Template Response
 ;;; ~~~~~~~~~~~~~~~~~
 
-(defmethod no-response ((site site))
-  (declare (ignore site))
+(defmethod no-response ((site site) request)
+  (declare (ignore site request))
   (make-instance 'text-response
                  :content (join "Unfortunately, the website has no"
                                 " appropriate content for your request"
