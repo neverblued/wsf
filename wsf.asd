@@ -15,6 +15,6 @@
   :serial t
   :components ((:file "package")
                (:file "site")
+               (:file "controller")
                (:file "response")
-               (:file "route")
                ))

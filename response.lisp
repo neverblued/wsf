@@ -18,19 +18,15 @@
 
 (defgeneric no-response (site request))
 
-(defun sendable? (thing)
-  (typep thing 'response))
-
-(defparameter *site-response* nil)
+(defparameter *response* nil)
 
 (defmethod respond :around ((site site) (request hunchentoot::request))
-  (let (*site-response*)
-    (declare (special *site-response*))
+  (let (*response*)
+    (declare (special *response*))
     (call-next-method)
-    (send (if (sendable? *site-response*)
-              *site-response*
+    (send (if (typep *response* 'response)
+              *response*
               (no-response site request)))))
-
 
 (defgeneric format-content-type (response))
 
