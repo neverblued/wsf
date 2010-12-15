@@ -6,24 +6,38 @@
 (defgeneric site-docroot (site)
   (:documentation "Site docroot folder path."))
 
+(defgeneric site-router (site)
+  (:documentation "Site router."))
+
+(defgeneric site-ajax-action (site action-name)
+  (:documentation "Site AJAX action (by name)."))
+
 (defclass site (router)
-  ((port          :initform nil :initarg :port    :accessor site-port)
-   (docroot       :initform nil :initarg :docroot :accessor site-docroot)
-   (container-key :initform #'route-name)))
+  (
+   (port :initform nil
+         :initarg :port
+         :accessor site-port
+         )
+   (docroot :initform nil
+            :initarg :docroot
+            :accessor site-docroot
+            )
+   (ajax-actions :initform (make-hash-table)
+                 )
+   ))
 
-(defgeneric controller (site controller-name))
-
-(defmethod controller ((site site) controller-name)
-  (route site controller-name))
+;; docroot
 
 (defun from-docroot (site file-path)
   (join (site-docroot site) "/" file-path))
 
-;; Setup
+;; port
 
 (defmethod initialize-instance :after ((site site) &key)
   (unless (site-port site)
     (setf (site-port site) (next-free-port))))
+
+;; acceptor
 
 (defgeneric site-acceptor (site)
   (:documentation "Get site acceptor."))
@@ -43,12 +57,66 @@
   (setf (hunchentoot::acceptor-request-dispatcher (site-acceptor site))
         (dispatcher site)))
 
-;;; Respond
+;; controller
+
+(defmethod site-controller ((site site) controller-name)
+  (route site controller-name))
+
+(defgeneric site-controllers (site))
+
+(defmethod site-controllers ((site site))
+  (rought::routes site))
+
+;;; respond
+
+(defparameter *response* nil)
+
+(defgeneric response-404 (site request))
+
+(defmethod respond :around ((site site) (request hunchentoot::request))
+  (let (*response*)
+    (declare (special *response*))
+    (call-next-method)
+    (send (if (typep *response* 'response)
+              *response*
+              (respond-failure site request)))))
 
 (defmethod respond ((site site) (request hunchentoot::request))
   (process site request))
 
-;;; Debug
+(defmethod response-404 ((site site) request)
+  (declare (ignore site request))
+  (make-instance 'text-response
+                 :content (join "Unfortunately, the website has no"
+                                " appropriate content for your request"
+                                " (404)."
+                                )
+                 ))
+
+;; ajax
+
+(macrolet ((ajax-action (site action-name)
+             `(gethash ,action-name (slot-value ,site 'ajax-actions))))
+
+  (defmethod site-ajax-action ((site site) action-name)
+    (ajax-action site action-name))
+
+  (defmethod (setf site-ajax-action) (new-action (site site) action-name)
+    (setf (ajax-action site action-name) new-action)))
+
+(defmacro set-ajax (site action-name (&rest action-args) &body action-body)
+  `(setf (site-ajax-action ,site ,action-name)
+         (lambda (&key ,@action-args)
+           (declare (ignorable ,@action-args))
+           ,@action-body)))
+
+(defun response-ajax (site action-name action-args)
+  (let ((action (site-ajax-action site action-name)))
+    (if action
+        (apply action action-args)
+        (list :ajax-error (list "unknown_action_name" action-name)))))
+
+;;; debug
 
 (defparameter last-request nil)
 

@@ -21,56 +21,65 @@
 
 ;;; Controller
 
-(defgeneric clause (controller)
+(defgeneric controller-clause (controller)
   (:documentation "Clause that should evaluate to T for matching the controller."))
 
-(defgeneric action (controller)
+(defgeneric controller-action (controller)
   (:documentation "Action of the controller."))
 
-(defgeneric encoder (controller)
+(defgeneric controller-encoder (controller)
   (:documentation "Controller encoder."))
 
-(defgeneric decoder (controller)
+(defgeneric controller-decoder (controller)
   (:documentation "Controller decoder."))
 
 (defclass controller (route)
-  ((clause  :initarg :clause  :accessor clause  :initform nil)
-   (action  :initarg :action  :accessor action  :initform nil)
-   (decoder :initarg :decoder :accessor decoder :initform nil)
-   (encoder :initarg :encoder :accessor encoder :initform nil)))
+  (
+   (controller-clause :initarg :clause
+                      :accessor controller-clause
+                      )
+   (controller-action :initarg :action
+                      :accessor controller-action
+                      )
+   (controller-decoder :initarg :decoder
+                       :accessor controller-decoder
+                       )
+   (controller-encoder :initarg :encoder
+                       :accessor controller-encoder
+                       )
+   ))
 
 ;;; Match
 
 (defmethod match ((request hunchentoot::request) (controller controller))
-  (flet ((integrate-test (clause request)
-           `(macrolet ((with-request (getter tester example)
-                         `(clause-match? (make-clause ,getter ,tester ,example) ,',request)))
-              ,clause)))
-    (macrolet ((test-against (clause request)
-                 `(eval (integrate-test ,clause ,request))))
-      (test-against (clause controller) request))))
+  (let ((clause (controller-clause controller)))
+    (funcall clause request)))
+
+;    (macrolet ((run-test (clause request)
+;                 (eval `(integrate-test ,clause ,request))))
+;      (run-test clause request))))
 
 ;;; Processing
 
 (defgeneric action-args (controller request)
   (:documentation "Make action arguments plist out of the request."))
 
-(defmethod succeed ((site site) (controller controller) request)
-  (let ((action (action controller)))
+(defmethod respond-success ((site site) (controller controller) request)
+  (let ((action (controller-action controller)))
     (if action
         (apply action (action-args controller request))
-        (fail site request))))
+        (respond-failure site request))))
 
 (defmethod action-args ((controller controller) request)
-  (let ((decoder (decoder controller))
+  (let ((decoder (controller-decoder controller))
         (default-args (list :*request* request)))
     (if decoder
         (append default-args (funcall decoder request))
         default-args)))
 
-(defmethod fail ((site site) request)
+(defmethod respond-failure ((site site) request)
   (declare (special *response*))
-  (setf *response* (no-response site request)))
+  (setf *response* (response-404 site request)))
 
 ;;; Link
 
@@ -78,9 +87,9 @@
   (:documentation "Make a link."))
 
 (defmethod link ((site site) controller-name &optional (args nil))
-  (let ((controller (controller site controller-name)))
+  (let ((controller (site-controller site controller-name)))
     (if controller
-        (careful-apply (encoder controller) args)
+        (careful-apply (controller-encoder controller) args)
         "/404-broken-link/")))
 
 ;; Set controller sugar
@@ -94,10 +103,16 @@
                              :encoder (lambda (&key ,@args)
                                         (declare (ignorable ,@args))
                                         ,link)
-                             :decoder (lambda (*request*)
-                                        (declare (special *request*))
-                                        ,params)
-                             :clause ',clause
+                             :decoder (lambda (request)
+                                        (let ((*request* request))
+                                          (declare (special *request*))
+                                          ,params))
+                             :clause (lambda (request)
+                                       (let ((*request* request))
+                                         (declare (special *request*))
+                                         (macrolet ((with-request (getter tester example)
+                                                      `(clause-match? (make-clause ,getter ,tester ,example) *request*)))
+                                           ,clause)))
                              :action (lambda (&key *request* ,@args)
                                        (declare (special *request*))
                                        (declare (ignorable ,@args))

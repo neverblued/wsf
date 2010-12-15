@@ -16,18 +16,6 @@
             )
    ))
 
-(defgeneric no-response (site request))
-
-(defparameter *response* nil)
-
-(defmethod respond :around ((site site) (request hunchentoot::request))
-  (let (*response*)
-    (declare (special *response*))
-    (call-next-method)
-    (send (if (typep *response* 'response)
-              *response*
-              (no-response site request)))))
-
 (defgeneric format-content-type (response))
 
 (defmethod send :before ((response response) &key)
@@ -152,16 +140,3 @@
                   (favicon ,(build-html-link "/images/favicon.ico" :rel "shortcut icon" :type "image/x-icon"))
                   (content (content ,response))
                   ))))
-
-;;; ~~~~~~~~~~~~~~~~~
-;;; Template Response
-;;; ~~~~~~~~~~~~~~~~~
-
-(defmethod no-response ((site site) request)
-  (declare (ignore site request))
-  (make-instance 'text-response
-                 :content (join "Unfortunately, the website has no"
-                                " appropriate content for your request"
-                                " (no-response)."
-                                )
-                 ))
