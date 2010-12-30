@@ -6,22 +6,25 @@
 (defgeneric site-docroot (site)
   (:documentation "Site docroot folder path."))
 
-(defgeneric site-router (site)
-  (:documentation "Site router."))
+(defgeneric site-controller (site)
+  (:documentation "Site controller."))
 
 (defgeneric site-ajax-action (site action-name)
   (:documentation "Site AJAX action (by name)."))
 
-(defclass site (router)
+(defclass site ()
   (
-   (port :initform nil
-         :initarg :port
-         :accessor site-port
-         )
    (docroot :initform nil
             :initarg :docroot
             :accessor site-docroot
             )
+   (port :initform nil
+         :initarg :port
+         :accessor site-port
+         )
+   (controller :initform (make-instance 'controller)
+               :reader site-controller
+               )
    (ajax-actions :initform (make-hash-table)
                  )
    ))
@@ -57,16 +60,6 @@
   (setf (hunchentoot::acceptor-request-dispatcher (site-acceptor site))
         (dispatcher site)))
 
-;; controller
-
-(defmethod site-controller ((site site) controller-name)
-  (route site controller-name))
-
-(defgeneric site-controllers (site))
-
-(defmethod site-controllers ((site site))
-  (rought::routes site))
-
 ;;; respond
 
 (defparameter *response* nil)
@@ -74,15 +67,18 @@
 (defgeneric response-404 (site request))
 
 (defmethod respond :around ((site site) (request hunchentoot::request))
-  (let (*response*)
-    (declare (special *response*))
+  (hunchentoot::start-session)
+  (let ((kgb::*user* (or (kgb::user-by-cookie)
+                         (kgb::user-anonymous)))
+        *response*)
+    (declare (special kgb::*user* *response*))
     (call-next-method)
     (send (if (typep *response* 'response)
               *response*
-              (respond-failure site request)))))
+              (response-404 site request)))))
 
 (defmethod respond ((site site) (request hunchentoot::request))
-  (process site request))
+  (select-by-request (site-controller site) request))
 
 (defmethod response-404 ((site site) request)
   (declare (ignore site request))

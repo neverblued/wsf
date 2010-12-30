@@ -19,12 +19,11 @@
 (defgeneric format-content-type (response))
 
 (defmethod send :before ((response response) &key)
-  (if (boundp 'hunchentoot::*reply*)
-      (setf (hunchentoot::content-type* hunchentoot::*reply*)
-            (format-content-type response)
-            hunchentoot::*hunchentoot-default-external-format*
-            (charset-instance (charset response)))
-      (print (content response))))
+  (when (boundp 'hunchentoot::*reply*)
+    (setf (hunchentoot::content-type* hunchentoot::*reply*)
+          (format-content-type response)
+          hunchentoot::*hunchentoot-default-external-format*
+          (charset-instance (charset response)))))
 
 (defmethod format-content-type ((response response))
   (format nil "~a; charset=~a" (content-type response) (charset-string (charset response))))
@@ -46,8 +45,8 @@
 (defmethod content-type ((response file-response))
   (mime<-pathname (file-path response)))
 
-(defmethod send ((response file-response) &key (binary t))
-  (string<-pathname (file-path response) :binary binary))
+(defmethod content ((response file-response))
+  (string<-pathname (file-path response) :binary t))
 
 ;;; ~~~~~~~~~~~~~
 ;;; Text Response

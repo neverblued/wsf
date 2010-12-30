@@ -21,101 +21,89 @@
 
 ;;; Controller
 
-(defgeneric controller-clause (controller)
-  (:documentation "Clause that should evaluate to T for matching the controller."))
+(defclass controller (selector)
+  ())
 
-(defgeneric controller-action (controller)
-  (:documentation "Action of the controller."))
+(defgeneric page-clause (site-page))
 
-(defgeneric controller-encoder (controller)
-  (:documentation "Controller encoder."))
+(defgeneric page-action (site-page))
 
-(defgeneric controller-decoder (controller)
-  (:documentation "Controller decoder."))
+(defgeneric page-encoder (site-page))
 
-(defclass controller (route)
-  (
-   (controller-clause :initarg :clause
-                      :accessor controller-clause
-                      )
-   (controller-action :initarg :action
-                      :accessor controller-action
-                      )
-   (controller-decoder :initarg :decoder
-                       :accessor controller-decoder
-                       )
-   (controller-encoder :initarg :encoder
-                       :accessor controller-encoder
-                       )
-   ))
+(defgeneric page-decoder (site-page))
 
-;;; Match
-
-(defmethod match ((request hunchentoot::request) (controller controller))
-  (let ((clause (controller-clause controller)))
-    (funcall clause request)))
-
-;    (macrolet ((run-test (clause request)
-;                 (eval `(integrate-test ,clause ,request))))
-;      (run-test clause request))))
-
-;;; Processing
-
-(defgeneric action-args (controller request)
+(defgeneric page-args (site-page request)
   (:documentation "Make action arguments plist out of the request."))
 
-(defmethod respond-success ((site site) (controller controller) request)
-  (let ((action (controller-action controller)))
-    (if action
-        (apply action (action-args controller request))
-        (respond-failure site request))))
+(defclass site-page (option)
+  (
+   (page-clause :initarg :clause
+                :accessor page-clause
+                )
+   (page-action :initarg :action
+                :accessor page-action
+                )
+   (page-encoder :initarg :encoder
+                 :accessor page-encoder
+                 )
+   (page-decoder :initarg :decoder
+                 :accessor page-decoder
+                 )
+   ))
 
-(defmethod action-args ((controller controller) request)
-  (let ((decoder (controller-decoder controller))
+(defmethod page-args ((site-page site-page) request)
+  (let ((decoder (page-decoder site-page))
         (default-args (list :*request* request)))
     (if decoder
         (append default-args (funcall decoder request))
         default-args)))
 
-(defmethod respond-failure ((site site) request)
-  (declare (special *response*))
-  (setf *response* (response-404 site request)))
+(defmethod match? ((request hunchentoot::request) (site-page site-page))
+  (let ((clause (page-clause site-page)))
+    (funcall clause request)))
+
+;;; Result
+
+(defmethod selection-success ((controller controller) request (site-page site-page))
+  (let ((action (page-action site-page)))
+    (if action
+        (apply action (page-args site-page request))
+        (selection-failure controller request))))
+
+(defmethod selection-failure ((controller controller) request)
+  (declare (ignore controller request)))
 
 ;;; Link
 
 (defgeneric link (site controller-name &optional args)
   (:documentation "Make a link."))
 
-(defmethod link ((site site) controller-name &optional (args nil))
-  (let ((controller (site-controller site controller-name)))
-    (if controller
-        (careful-apply (controller-encoder controller) args)
+(defmethod link ((site site) page-name &optional (args nil))
+  (let ((site-page (select-by-name (site-controller site) page-name)))
+    (if site-page
+        (careful-apply (page-encoder site-page) args)
         "/404-broken-link/")))
 
 ;; Set controller sugar
 
-(defmacro set-controller (site name &key args link params clause action)
-  (with-gensyms (site* name*)
-    `(let ((,site* ,site)
-           (,name* ,name))
-       (mount (make-instance 'controller
-                             :name ,name*
-                             :encoder (lambda (&key ,@args)
-                                        (declare (ignorable ,@args))
-                                        ,link)
-                             :decoder (lambda (request)
-                                        (let ((*request* request))
-                                          (declare (special *request*))
-                                          ,params))
-                             :clause (lambda (request)
-                                       (let ((*request* request))
-                                         (declare (special *request*))
-                                         (macrolet ((with-request (getter tester example)
-                                                      `(clause-match? (make-clause ,getter ,tester ,example) *request*)))
-                                           ,clause)))
-                             :action (lambda (&key *request* ,@args)
-                                       (declare (special *request*))
-                                       (declare (ignorable ,@args))
-                                       ,action)
-                             )
-              ,site*))))
+(defmacro set-site-page (site name &key args link clause params action)
+  `(set-selector-option (site-controller ,site)
+                        'site-page ,name
+                        :encoder (lambda (&key ,@args)
+                                   (declare (ignorable ,@args))
+                                   ,link)
+                        :decoder (lambda (request)
+                                   (let ((*request* request))
+                                     (declare (special *request*))
+                                     ,params))
+                        :clause (lambda (request)
+                                  (let ((*request* request))
+                                    (declare (special *request*))
+                                    (macrolet ((with-request (getter tester example)
+                                                 `(clause-match? (make-clause ,getter ,tester ,example) *request*)))
+                                      ,clause)))
+                        :action (lambda (&key *request* ,@args)
+                                  (declare (special *request*))
+                                  (declare (ignorable ,@args))
+                                  ,action)
+                        ))

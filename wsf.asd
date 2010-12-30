@@ -11,7 +11,7 @@
   :version "0.1"
   :author "Demetrius Conde <condemetrius@gmail.com>"
   :licence "Public Domain"
-  :depends-on (#:osicat #:dc-bin #:hunchentight #:rought)
+  :depends-on (#:osicat #:dc-bin #:hunchentight)
   :serial t
   :components ((:file "package")
                (:file "response")
