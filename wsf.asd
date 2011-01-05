@@ -11,10 +11,15 @@
   :version "0.1"
   :author "Demetrius Conde <condemetrius@gmail.com>"
   :licence "Public Domain"
-  :depends-on (#:osicat #:dc-bin #:hunchentight)
+  :depends-on (#:osicat #:hunchentoot #:dc-bin #:jsun #:kgb)
   :serial t
   :components ((:file "package")
-               (:file "response")
-               (:file "site")
+               (:file "http")
+               (:file "files")
+               (:file "responses")
+               (:file "kgb")
+               (:file "respond")
                (:file "controller")
-               ))
+               (:file "ajax")
+               (:file "site")
+               (:file "debug")))

@@ -1,6 +1,6 @@
 (in-package #:wsf)
 
-;;; Clause
+;;; clause
 
 (defmacro make-clause (get test example)
   `(list #',get #',test ,example))
@@ -19,91 +19,117 @@
            (funcall (clause-get clause) request)
            (clause-example clause)))
 
-;;; Controller
+;;; route
 
-(defclass controller (selector)
-  ())
+(defgeneric route (site request))
 
-(defgeneric page-clause (site-page))
+(defgeneric route-name (route))
 
-(defgeneric page-action (site-page))
+(defgeneric route-clause (route))
 
-(defgeneric page-encoder (site-page))
+(defgeneric route-action (route))
 
-(defgeneric page-decoder (site-page))
+(defgeneric route-encoder (route))
 
-(defgeneric page-args (site-page request)
-  (:documentation "Make action arguments plist out of the request."))
+(defgeneric route-decoder (route))
 
-(defclass site-page (option)
-  (
-   (page-clause :initarg :clause
-                :accessor page-clause
-                )
-   (page-action :initarg :action
-                :accessor page-action
-                )
-   (page-encoder :initarg :encoder
-                 :accessor page-encoder
-                 )
-   (page-decoder :initarg :decoder
-                 :accessor page-decoder
-                 )
-   ))
+(defgeneric route-args (route request))
 
-(defmethod page-args ((site-page site-page) request)
-  (let ((decoder (page-decoder site-page))
+(defmethod route (site request)
+  (select (site-controller site) request))
+
+(defmethod route-args (route request)
+  (let ((decoder (route-decoder route))
         (default-args (list :*request* request)))
     (if decoder
         (append default-args (funcall decoder request))
         default-args)))
 
-(defmethod match? ((request hunchentoot::request) (site-page site-page))
-  (let ((clause (page-clause site-page)))
-    (funcall clause request)))
+(defclass route (containable)
+  (
+   (route-name :initarg :name
+               :accessor route-name
+               )
+   (route-clause :initarg :clause
+                 :accessor route-clause
+                 )
+   (route-action :initarg :action
+                 :accessor route-action
+                 )
+   (route-encoder :initarg :encoder
+                  :accessor route-encoder
+                  )
+   (route-decoder :initarg :decoder
+                  :accessor route-decoder
+                  )
+   ))
 
-;;; Result
+;;; controller
 
-(defmethod selection-success ((controller controller) request (site-page site-page))
-  (let ((action (page-action site-page)))
+(defgeneric site-controller (site)
+  (:documentation "Site controller."))
+
+(defgeneric routes (controller)
+  (:documentation "Controller routes."))
+
+(defclass controller (container)
+  (
+   (container-key :initform #'route-name
+                  )
+   ))
+
+(defmethod routes (controller)
+  (container-list controller))
+
+(defmethod (setf routes) (new-routes controller)
+  (setf (container-list controller) new-routes))
+
+;;; selection
+
+(defmethod options ((controller controller))
+  (routes controller))
+
+(defmethod selection-predicate ((route route) (request request))
+  (funcall (route-clause route) request))
+
+(defmethod succeed-selection ((controller controller) (request request) (route route))
+  (let ((action (route-action route)))
     (if action
-        (apply action (page-args site-page request))
-        (selection-failure controller request))))
+        (apply action (route-args route request))
+        (fail-selection controller request))))
 
-(defmethod selection-failure ((controller controller) request)
-  (declare (ignore controller request)))
+;;; link
 
-;;; Link
-
-(defgeneric link (site controller-name &optional args)
+(defgeneric link (site route-name &optional args)
   (:documentation "Make a link."))
 
-(defmethod link ((site site) page-name &optional (args nil))
-  (let ((site-page (select-by-name (site-controller site) page-name)))
-    (if site-page
-        (careful-apply (page-encoder site-page) args)
+(defmethod link (site route-name &optional (args nil))
+  (let ((route (find-containing-key (site-controller site) route-name)))
+    (if route
+        (careful-apply (route-encoder route) args)
         "/404-broken-link/")))
 
-;; Set controller sugar
+;; setup
 
-(defmacro set-site-page (site name &key args link clause params action)
-  `(set-selector-option (site-controller ,site)
-                        'site-page ,name
-                        :encoder (lambda (&key ,@args)
-                                   (declare (ignorable ,@args))
-                                   ,link)
-                        :decoder (lambda (request)
-                                   (let ((*request* request))
-                                     (declare (special *request*))
-                                     ,params))
-                        :clause (lambda (request)
-                                  (let ((*request* request))
-                                    (declare (special *request*))
-                                    (macrolet ((with-request (getter tester example)
-                                                 `(clause-match? (make-clause ,getter ,tester ,example) *request*)))
-                                      ,clause)))
-                        :action (lambda (&key *request* ,@args)
-                                  (declare (special *request*))
-                                  (declare (ignorable ,@args))
-                                  ,action)
-                        ))
+(defmacro set-route (site name &key args link clause params action)
+  `(put-into (make-instance 'route
+                            :name ,name
+                            :encoder (lambda (&key ,@args)
+                                       (declare (ignorable ,@args))
+                                       ,link)
+                            :clause (lambda (request)
+                                      (let ((*request* request))
+                                        (declare (special *request*))
+                                        (macrolet ((with-request (getter tester example)
+                                                     `(clause-match? (make-clause ,getter ,tester ,example) *request*)))
+                                          ,clause)))
+                            :decoder (lambda (request)
+                                       (let ((*request* request))
+                                         (declare (special *request*))
+                                         ,params))
+                            :action (lambda (&key *request* ,@args)
+                                      (declare (special *request* *response*))
+                                      (declare (ignorable ,@args))
+                                      ,action)
+                            )
+             (site-controller ,site)))

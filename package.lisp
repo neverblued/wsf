@@ -1,9 +1,9 @@
 (defpackage #:wsf
-  (:use #:common-lisp #:osicat
-        #:dc-bin #:hunchentight)
-  (:shadow #:*request*)
-  (:export #:site #:site-port #:site-docroot #:from-docroot ; site
-           #:site-ajax-action #:response-ajax #:set-ajax
-           #:controller #:set-site-page #:with-request #:link ; controller
-           #:*request* #:*response* #:file-response #:text-response #:html-response #:response-404 #:response-ajax ; response
-           ))
+  (:use #:common-lisp #:osicat #:hunchentoot #:dc-bin)
+  (:shadow #:*request* #:acceptor)
+  (:export #:site-port #:stop&start ; http
+           #:site-docroot #:from-docroot ; files
+           #:*request* #:*response* #:send #:file-response #:text-response #:html-response #:default-response ; respond
+           #:ajax-route #:respond-ajax #:set-ajax ; ajax
+           #:set-route #:controller #:with-request #:link ; controller
+           #:site))

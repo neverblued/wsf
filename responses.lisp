@@ -4,6 +4,32 @@
 ;;; Response
 ;;; ~~~~~~~~
 
+(defgeneric send (response))
+
+(defgeneric content-type (response))
+
+(defgeneric charset (response))
+
+(defun format-content-type (response)
+  (format nil "~a; charset=~a"
+          (content-type response)
+          (charset-string (charset response))))
+
+(defmethod send :before (response)
+  (when (boundp '*reply*)
+    (setf (content-type* *reply*)
+          (format-content-type response)
+          *hunchentoot-default-external-format*
+          (charset-instance (charset response)))))
+
+(defgeneric content (response))
+
+(defmethod send (response)
+  (content response))
+
+(defmethod content (response)
+  "Hello, world!")
+
 (defclass response ()
   (
    (content-type :initform "text/plain"
@@ -15,21 +41,6 @@
             :accessor charset
             )
    ))
-
-(defgeneric format-content-type (response))
-
-(defmethod send :before ((response response) &key)
-  (when (boundp 'hunchentoot::*reply*)
-    (setf (hunchentoot::content-type* hunchentoot::*reply*)
-          (format-content-type response)
-          hunchentoot::*hunchentoot-default-external-format*
-          (charset-instance (charset response)))))
-
-(defmethod format-content-type ((response response))
-  (format nil "~a; charset=~a" (content-type response) (charset-string (charset response))))
-
-(defmethod content ((response response))
-  "Hello, world!")
 
 ;;; ~~~~~~~~~~~~~
 ;;; File Response
@@ -68,13 +79,13 @@
 
 (defclass html-response (text-response)
   (
-   (title :initform "&last; &last; &last;"
+   (title :initform "Hello, world!"
           :initarg :title
           :accessor title
           )
    (content-type :initform "text/html"
                  )
-   (content :initform "Hello, world! I am a WSF::HTML-RESPONSE template content."
+   (content :initform "Hello, world! I'm (WSF::RESPONSE-CONTENT WSF::HTML-RESPONSE)."
             )
    (style :initform nil
           :initarg :style
@@ -86,17 +97,23 @@
             )
    ))
 
+;; links
+
 (defun build-html-link (href &key rel type)
   (format nil "<link rel='~a' type='~a' href='~a' />" rel type href))
 
 (defun build-html-link-style (path-base)
   (build-html-link (join "/css/" path-base ".css") :rel "stylesheet" :type "text/css"))
 
+(defgeneric build-html-style (html-response))
+
 (defmethod build-html-style ((response html-response))
-  (if (style response)
-      (apply #'join
-             (mapcar #'build-html-link-style (style response)))
-      ))
+  (let ((style (style response)))
+    (if style
+        (apply #'join (mapcar #'build-html-link-style style))
+        "")))
+
+;; scripts
 
 (defun build-html-script (href &key type)
   (format nil "<script type='~a' src='~a'></script>" type href))
@@ -104,28 +121,23 @@
 (defun build-html-scripts-include (path-base &optional (type "text/javascript"))
   (build-html-script (join "/js/" path-base ".js") :type type))
 
-(defmethod build-html-scripts ((response html-response))
-  (if (scripts response)
-      (apply #'join
-             (mapcar #'build-html-scripts-include (scripts response)))
-      ))
+(defgeneric build-html-scripts (html-response))
 
-(defmethod send ((response html-response) &key)
+(defmethod build-html-scripts ((response html-response))
+  (let ((scripts (scripts response)))
+    (if scripts
+        (apply #'join (mapcar #'build-html-scripts-include scripts))
+        "")))
+
+;; document
+
+(defmethod send ((response html-response))
   (apply #'join-rec
          (patch '(
                   "<!DOCTYPE html>"
                   "<html>"
-                  (
-                   "<head>"
-                   (
-                    "<title>" title "</title>"
-                    favicon
-                    style
-                    scripts
-                    )
-                   "</head>"
-                   "<body>" content "</body>"
-                   )
+                  "<head><title>" title "</title>" favicon style scripts "</head>"
+                  "<body>" content "</body>"
                   "</html>"
                   )
                 `(
@@ -137,5 +149,4 @@
                                 ))
                   (title (title ,response))
                   (favicon ,(build-html-link "/images/favicon.ico" :rel "shortcut icon" :type "image/x-icon"))
-                  (content (content ,response))
-                  ))))
+                  (content (content ,response))))))
