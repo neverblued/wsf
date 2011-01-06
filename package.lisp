@@ -1,5 +1,5 @@
 (defpackage #:wsf
-  (:use #:common-lisp #:osicat #:hunchentoot #:dc-bin)
+  (:use #:common-lisp #:osicat #:hunchentoot #:dc-bin #:kgb)
   (:shadow #:*request* #:acceptor)
   (:export #:site-port #:stop&start ; http
            #:site-docroot #:from-docroot ; files
