@@ -29,5 +29,4 @@
 
 (defmethod authenticate ((request request))
   (start-session)
-  (or (authenticate-cookie)
-      (kgb::make-guest)))
+  (authenticate-cookie))
