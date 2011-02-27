@@ -1,25 +1,29 @@
 (in-package #:wsf)
 
 (defgeneric respond (site request))
-
 (defgeneric default-response (site request))
+(defgeneric failure-response (site request condition))
 
-(defgeneric error-response (site request))
+(defvar *site*)
+(defvar *response*)
 
 (defmethod respond :around (site request)
-  (let (*response*)
-    (declare (special *response*))
+  (let ((*site* site) (*request* request) *response*)
     (kgb::with-authentication request
-      (call-next-method))
-    (send (if (typep *response* 'response)
-              *response*
-              (default-response site request)))))
+      (catch 'response (call-next-method)))
+    (send (typecase *response*
+            (response *response*)
+            (t (default-response site request))))))
+
+(defun throw-response (response)
+  (setf *response* response)
+  (throw 'response nil))
 
 (defmethod respond (site (request request))
   (handler-case (route site request)
-    (error (condition)
-      (declare (special *response*))
-      (setf *response* (error-response site condition)))))
+    ((or warning error)
+        (condition)
+      (throw-response (failure-response site request condition)))))
 
 (defmethod respond (site (uri string))
   (let ((*acceptor* (site-acceptor site))
@@ -29,15 +33,10 @@
 (defmethod default-response (site request)
   (declare (ignore site request))
   (make-instance 'text-response
-                 :content (join "Unfortunately, the website has no"
-                                " appropriate content for your request"
-                                " (404)."
-                                )
-                 ))
+                 :content "Unfortunately, the website has no appropriate content for your request (404)."))
 
-(defmethod error-response (site condition)
-  (declare (ignore site))
+(defmethod failure-response (site request condition)
+  (declare (ignore site request))
   (make-instance 'html-response
-                 :title "Server error"
-                 :content (format nil "<h1>Server error</h1><p>~a</p>" condition)
-                 ))
+                 :title "Server failure"
+                 :content (format nil "<h1>Server failure</h1><p>~a</p>" condition)))

@@ -22,17 +22,11 @@
 ;;; route
 
 (defgeneric route (site request))
-
 (defgeneric route-name (route))
-
 (defgeneric route-clause (route))
-
 (defgeneric route-action (route))
-
 (defgeneric route-encoder (route))
-
 (defgeneric route-decoder (route))
-
 (defgeneric route-args (route request))
 
 (defmethod route (site request)
@@ -46,37 +40,21 @@
         default-args)))
 
 (defclass route (containable)
-  (
-   (route-name :initarg :name
-               :accessor route-name
-               )
-   (route-clause :initarg :clause
-                 :accessor route-clause
-                 )
-   (route-action :initarg :action
-                 :accessor route-action
-                 )
-   (route-encoder :initarg :encoder
-                  :accessor route-encoder
-                  )
-   (route-decoder :initarg :decoder
-                  :accessor route-decoder
-                  )
-   ))
+  ((route-name :initarg :name :accessor route-name)
+   (route-clause :initarg :clause :accessor route-clause)
+   (route-action :initarg :action :accessor route-action)
+   (route-encoder :initarg :encoder :accessor route-encoder)
+   (route-decoder :initarg :decoder :accessor route-decoder)))
 
 ;;; controller
 
-(defgeneric site-controller (site)
-  (:documentation "Site controller."))
+(defgeneric site-controller (site))
 
-(defgeneric routes (controller)
-  (:documentation "Controller routes."))
+(defgeneric routes (controller))
+(defgeneric (setf routes) (new-routes controller))
 
 (defclass controller (container)
-  (
-   (container-key :initform #'route-name
-                  )
-   ))
+  ((container-key :initform #'route-name)))
 
 (defmethod routes (controller)
   (container-list controller))
@@ -119,16 +97,13 @@
                                        ,link)
                             :clause (lambda (request)
                                       (let ((*request* request))
-                                        (declare (special *request*))
                                         (macrolet ((with-request (getter tester example)
                                                      `(clause-match? (make-clause ,getter ,tester ,example) *request*)))
                                           ,clause)))
                             :decoder (lambda (request)
                                        (let ((*request* request))
-                                         (declare (special *request*))
                                          ,params))
                             :action (lambda (&key *request* ,@args)
-                                      (declare (special *request* *response*))
                                       (declare (ignorable ,@args))
                                       ,action)
                             )

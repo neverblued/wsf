@@ -22,10 +22,8 @@
               :expires (+ (get-universal-time) (auth-period user))
               :path "/"))
 
-(defun authenticate-cookie (request)
-  (awhen (cookie-in auth-cookie-name request)
-    (kgb::find-user-ausweis it)))
-
 (defmethod authenticate ((request request))
-  (start-session)
-  (authenticate-cookie request))
+  (let ((*request* request))
+    (start-session)
+    (awhen (cookie-in auth-cookie-name)
+      (kgb::ausweis-user it))))

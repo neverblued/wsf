@@ -4,7 +4,7 @@
 
 (defparameter last-requests nil)
 
-(defmethod respond-site :before ((site site) (request request))
+(defmethod respond :before ((site site) (request request))
   (setf last-request request)
   (setf last-requests
         (cons last-request
@@ -17,5 +17,5 @@
 
 (defun test-last-requests (site)
   (mapcar (lambda (request)
-            (route site request))
+            (respond site request))
           last-requests))

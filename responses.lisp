@@ -1,14 +1,29 @@
 (in-package #:wsf)
 
-;;; ~~~~~~~~
-;;; Response
-;;; ~~~~~~~~
+;; charset
+
+(defparameter *charsets* `(
+                           (:utf-8 (,hunchentoot::+utf-8+ "utf-8"))
+                           ))
+
+(defun charset-instance (charset)
+  (first (find-assoc charset *charsets* :test #'eql)))
+
+(defun charset-string (charset)
+  (second (find-assoc charset *charsets* :test #'eql)))
+
+;;; response
 
 (defgeneric send (response))
-
+(defgeneric content (response))
 (defgeneric content-type (response))
-
 (defgeneric charset (response))
+
+(defmethod send (response)
+  (content response))
+
+(defmethod content (response)
+  (format nil "Hello, ~a!" (gensym "WORLD")))
 
 (defun format-content-type (response)
   (format nil "~a; charset=~a"
@@ -22,131 +37,70 @@
           *hunchentoot-default-external-format*
           (charset-instance (charset response)))))
 
-(defgeneric content (response))
-
-(defmethod send (response)
-  (content response))
-
-(defmethod content (response)
-  "Hello, world!")
-
 (defclass response ()
-  (
-   (content-type :initform "text/plain"
-                 :initarg :content-type
-                 :accessor content-type
-                 )
-   (charset :initform :utf-8
-            :initarg :charset
-            :accessor charset
-            )
-   ))
+  ((charset :initform :utf-8 :initarg :charset :accessor charset)))
 
-;;; ~~~~~~~~~~~~~
-;;; File Response
-;;; ~~~~~~~~~~~~~
+;;; file response
 
 (defclass file-response (response)
-  (
-   (file-path :initarg :file-path
-              :accessor file-path
-              )
-   ))
+  ((file-path :initarg :file-path :accessor file-path)))
 
 (defmethod content-type ((response file-response))
-  (mime<-pathname (file-path response)))
+  (mime-type (file-path response)))
 
 (defmethod content ((response file-response))
-  (string<-pathname (file-path response) :binary t))
+  (pathname-content (file-path response) :binary t))
 
-;;; ~~~~~~~~~~~~~
-;;; Text Response
-;;; ~~~~~~~~~~~~~
+;;; text response
 
 (defclass text-response (response)
-  (
-   (content-type :initform "text/plain"
-                 )
-   (content :initform "Hello, world! I am a WSF::TEXT-RESPONSE template content."
-            :initarg :content
-            :accessor content
-            )
-   ))
+  ((content-type :initarg :content-type :accessor content-type :initform "text/plain")
+   (content :initarg :content :accessor content :initform "Hello, world!")))
 
-;;; ~~~~~~~~~~~~~
-;;; HTML Response
-;;; ~~~~~~~~~~~~~
+;;; HTML response
 
 (defclass html-response (text-response)
-  (
-   (title :initform "Hello, world!"
-          :initarg :title
-          :accessor title
-          )
-   (content-type :initform "text/html"
-                 )
-   (content :initform "Hello, world! I'm (WSF::RESPONSE-CONTENT WSF::HTML-RESPONSE)."
-            )
-   (style :initform nil
-          :initarg :style
-          :accessor style
-          )
-   (scripts :initform nil
-            :initarg :scripts
-            :accessor scripts
-            )
-   ))
+  ((title :initarg :title :accessor title :initform "Hello, world!")
+   (content-type :initform "text/html")
+   (content :initform "<h1>Hello, world!</h1><p>I'm a <i>markup</i>.</p>")
+   (style :initarg :style :accessor style :initform nil)
+   (script :initarg :script :accessor script :initform nil)))
 
-;; links
-
-(defun build-html-link (href &key rel type)
-  (format nil "<link rel='~a' type='~a' href='~a' />" rel type href))
-
-(defun build-html-link-style (path-base)
-  (build-html-link (join "/css/" path-base ".css") :rel "stylesheet" :type "text/css"))
-
-(defgeneric build-html-style (html-response))
-
-(defmethod build-html-style ((response html-response))
-  (let ((style (style response)))
-    (if style
-        (apply #'join (mapcar #'build-html-link-style style))
-        "")))
-
-;; scripts
-
-(defun build-html-script (href &key type)
-  (format nil "<script type='~a' src='~a'></script>" type href))
-
-(defun build-html-scripts-include (path-base &optional (type "text/javascript"))
-  (build-html-script (join "/js/" path-base ".js") :type type))
-
-(defgeneric build-html-scripts (html-response))
-
-(defmethod build-html-scripts ((response html-response))
-  (let ((scripts (scripts response)))
-    (if scripts
-        (apply #'join (mapcar #'build-html-scripts-include scripts))
-        "")))
-
-;; document
+(defgeneric format-html-style (html-response))
+(defgeneric format-html-script (html-response))
 
 (defmethod send ((response html-response))
-  (apply #'join-rec
-         (patch '(
-                  "<!DOCTYPE html>"
-                  "<html>"
-                  "<head><title>" title "</title>" favicon style scripts "</head>"
-                  "<body>" content "</body>"
-                  "</html>"
-                  )
-                `(
-                  (style ,(or (build-html-style response)
-                              "<!-- CSS be here must, young Padawan! -->"
-                              ))
-                  (scripts ,(or (build-html-scripts response)
-                                "<!-- Scripts be here could, young Padawan! -->"
-                                ))
-                  (title (title ,response))
-                  (favicon ,(build-html-link "/images/favicon.ico" :rel "shortcut icon" :type "image/x-icon"))
-                  (content (content ,response))))))
+  (format nil "<!DOCTYPE html><html><head><title>~a</title>~{~a~}</head><body>~a</body></html>"
+          (title response)
+          (list (format-html-style response)
+                (format-html-script response)
+                (html-link "/images/favicon.ico" :rel "shortcut icon" :type "image/x-icon"))
+          (content response)))
+
+;; link
+
+(defun html-link (href &key rel type)
+  (format nil "<link rel='~a' type='~a' href='~a' />" rel type href))
+
+(defun html-include-style (path-base)
+  (html-link (join "/css/" path-base ".css") :rel "stylesheet" :type "text/css"))
+
+(defmethod format-html-style ((response html-response))
+  (let ((style-names (style response)))
+    (if style-names
+        (apply #'join (mapcar #'html-include-style style-names))
+        "")))
+
+;; script
+
+(defun html-script (href &key type)
+  (format nil "<script type='~a' src='~a'></script>" type href))
+
+(defun html-include-javascript (path-base &optional (type "text/javascript"))
+  (html-script (join "/js/" path-base ".js") :type type))
+
+(defmethod format-html-script ((response html-response))
+  (let ((script-names (script response)))
+    (if script-names
+        (apply #'join (mapcar #'html-include-javascript script-names))
+        "")))

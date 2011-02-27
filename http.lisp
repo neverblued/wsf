@@ -3,11 +3,7 @@
 ;; mode
 
 (defclass acceptor (hunchentoot::acceptor)
-  (
-   (accepting? :initform nil
-               :accessor accepting?
-               )
-   ))
+  ((accepting? :initform nil :accessor accepting?)))
 
 (defmethod start :around ((acceptor acceptor))
   (unless (accepting? acceptor)
@@ -29,10 +25,10 @@
 
 ;; port
 
-(defvar *acceptors* (make-hash-table))
+(defvar *port->acceptor* (make-hash-table))
 
 (macrolet ((acceptor (port)
-             `(gethash ,port *acceptors*)))
+             `(gethash ,port *port->acceptor*)))
 
   (defun port-acceptor (port)
     (or (acceptor port)
@@ -50,7 +46,7 @@
         (stop acceptor)))))
 
 (defmethod release-port (port)
-  (remhash port *acceptors*))
+  (remhash port *port->acceptor*))
 
 (defparameter *first-port* 8123)
 
@@ -58,12 +54,3 @@
   (do ((port *first-port* (1+ port)))
       ((port-free? port)
        port)))
-
-;; site
-
-(defgeneric site-port (site)
-  (:documentation "Site HTTP-port."))
-
-(defun site-acceptor (site)
-  "Acceptor of the SITE."
-  (port-acceptor (site-port site)))

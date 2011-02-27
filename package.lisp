@@ -1,9 +1,12 @@
 (defpackage #:wsf
-  (:use #:common-lisp #:osicat #:hunchentoot #:dc-bin #:kgb)
-  (:shadow #:*request* #:acceptor)
-  (:export #:site-port #:stop&start ; http
+  (:use #:common-lisp #:hunchentoot #:dc-bin #:kgb)
+  (:shadow #:acceptor #:content-type)
+  (:export #:site
+           #:site-port #:stop&start ; http
            #:site-docroot #:from-docroot ; files
-           #:*request* #:*response* #:send #:file-response #:text-response #:html-response #:default-response ; respond
-           #:ajax-route #:respond-ajax #:set-ajax #:set-ajax-route ; ajax
+           #:*site* #:*request* #:*response* #:send ; respond
+           #:default-response #:failure-response #:file-response #:text-response #:html-response ; responses
            #:set-route #:controller #:with-request #:link ; controller
-           #:site))
+           #:set-ajax-route #:set-ajax #:set-ajax-route #:respond-ajax #:ajax-win #:ajax-fail ; ajax
+           #:set-auth-cookie #:auth-cookie-life ; kgb
+           ))

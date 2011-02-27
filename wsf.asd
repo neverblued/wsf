@@ -8,10 +8,10 @@
 
 (defsystem "wsf"
   :description "Web Site Framework"
-  :version "0.1"
+  :version "0.2"
   :author "Demetrius Conde <condemetrius@gmail.com>"
   :licence "Public Domain"
-  :depends-on (#:osicat #:hunchentoot #:dc-bin #:jsun #:kgb)
+  :depends-on (#:hunchentoot #:dc-bin #:jsun #:kgb) ; #:osicat
   :serial t
   :components ((:file "package")
                (:file "http")
