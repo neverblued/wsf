@@ -16,14 +16,20 @@
 (defun auth-period (subject)
   (reduce #'min (mapcar #'auth-cookie-life (kgb::groups subject))))
 
-(defun set-auth-cookie (user)
+(defun set-auth-cookie (person)
   (set-cookie auth-cookie-name
-              :value (kgb::user-ausweis user)
-              :expires (+ (get-universal-time) (auth-period user))
+              :value (kgb::ausweis person)
+              :expires (+ (get-universal-time) (auth-period person))
+              :path "/"))
+
+(defun kill-auth-cookie ()
+  (set-cookie auth-cookie-name
+              :value ""
+              :expires 0
               :path "/"))
 
 (defmethod authenticate ((request request))
   (let ((*request* request))
     (start-session)
     (awhen (cookie-in auth-cookie-name)
-      (kgb::ausweis-user it))))
+      (kgb::ausweis-person it))))

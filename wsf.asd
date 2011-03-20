@@ -1,8 +1,5 @@
 (defpackage #:wsf-system
-  (:use
-     #:common-lisp
-     #:asdf
-     ))
+  (:use #:common-lisp #:asdf))
 
 (in-package #:wsf-system)
 
@@ -10,8 +7,7 @@
   :description "Web Site Framework"
   :version "0.2"
   :author "Demetrius Conde <condemetrius@gmail.com>"
-  :licence "Public Domain"
-  :depends-on (#:hunchentoot #:dc-bin #:jsun #:kgb) ; #:osicat
+  :depends-on (#:hunchentoot #:cl-blackjack #:jsun #:kgb)
   :serial t
   :components ((:file "package")
                (:file "http")
