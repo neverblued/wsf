@@ -18,6 +18,7 @@
 (defgeneric content (response))
 (defgeneric content-type (response))
 (defgeneric charset (response))
+(defgeneric return-code (response))
 
 (defmethod send (response)
   (content response))
@@ -32,13 +33,15 @@
 
 (defmethod send :before (response)
   (when (boundp '*reply*)
-    (setf (content-type* *reply*)
-          (format-content-type response)
-          *hunchentoot-default-external-format*
-          (charset-instance (charset response)))))
+    (setf (return-code* *reply*)                (return-code response)
+          (content-type* *reply*)               (format-content-type response)
+          *hunchentoot-default-external-format* (charset-instance (charset response)))))
 
 (defclass response ()
-  ((charset :initform :utf-8 :initarg :charset :accessor charset)))
+  ((return-code :initarg :return-code :accessor return-code :initform +http-ok+)
+   (charset :initarg :charset :accessor charset :initform :utf-8)))
+
+(pushnew +http-not-found+ *approved-return-codes*)
 
 ;;; file response
 
@@ -63,16 +66,19 @@
   ((title :initarg :title :accessor title :initform "Hello, world!")
    (content-type :initform "text/html")
    (content :initform "<h1>Hello, world!</h1><p>I'm a <i>markup</i>.</p>")
+   (meta-content :initarg :meta :accessor meta-content :initform nil)
    (style :initarg :style :accessor style :initform nil)
    (script :initarg :script :accessor script :initform nil)))
 
+(defgeneric format-html-meta (html-response))
 (defgeneric format-html-style (html-response))
 (defgeneric format-html-script (html-response))
 
 (defmethod send ((response html-response))
   (format nil "<!DOCTYPE html><html><head><title>~a</title>~{~a~}</head><body>~a</body></html>"
           (title response)
-          (list (format-html-style response)
+          (list (format-html-meta response)
+                (format-html-style response)
                 (format-html-script response)
                 (html-link "/images/favicon.ico" :rel "shortcut icon" :type "image/x-icon"))
           (content response)))
@@ -100,7 +106,18 @@
   (html-script (join "/js/" path-base ".js") :type type))
 
 (defmethod format-html-script ((response html-response))
-  (let ((script-names (script response)))
-    (if script-names
-        (apply #'join (mapcar #'html-include-javascript script-names))
-        "")))
+  (aif (script response)
+       (apply #'join (mapcar #'html-include-javascript it))
+       ""))
+
+;; meta
+
+(defun html-meta (name content)
+  (format nil "<meta name=~a content=~a />" (jsun::encode name) (jsun::encode content)))
+
+(defmethod format-html-meta ((response html-response))
+  (aif (meta-content response)
+       (apply #'join (mapcar (lambda (meta)
+                               (apply #'html-meta meta))
+                             it))
+       ""))

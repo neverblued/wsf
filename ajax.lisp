@@ -13,9 +13,8 @@
         new-action))
 
 (defun ajax-win (&optional data)
-  (if data
-      (list :status "win" :data data)
-      (list :status "win")))
+  (append (list :status "win")
+          (awhen data (list :data it))))
 
 (defun ajax-fail (condition)
   (list :status "fail" :data (format nil "~a" condition)))
@@ -31,11 +30,16 @@
                     (error (condition)
                       (throw 'ajax-response (ajax-fail condition)))))))
 
+(define-condition undefined-ajax-action (error)
+  ((action-name :initarg :action-name :reader condition-action-name))
+  (:report (lambda (condition stream)
+             (format stream "Неизвестное действие ~a." (condition-action-name condition)))))
+
 (defmethod ajax-response (site action-name action-args)
   (let ((action (ajax-action site action-name)))
     (if (functionp action)
         (ajax-win (apply action action-args))
-        (ajax-fail (list "unknown-action-name" action-name)))))
+        (error 'undefined-ajax-action :action-name action-name))))
 
 (defmacro set-ajax-route (site &optional (uri "/ajax/"))
   `(set-route ,site :ajax

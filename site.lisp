@@ -26,6 +26,9 @@
    (controller :initform (make-instance 'controller) :reader site-controller)
    (ajax-actions :initform (make-hash-table) :accessor ajax-actions)))
 
+(defmethod initialize-instance :after ((site site) &key)
+  (set-ajax-route site))
+
 (defmethod initialize-instance :around ((site site) &key)
   (call-next-method)
   (open-site site))
