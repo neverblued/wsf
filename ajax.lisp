@@ -45,7 +45,7 @@
   `(set-route ,site :ajax
               :args (action-name action-args)
               :link (join ,uri action-name)
-              :clause (with-request request-uri begins-with? ,uri)
+              :clause (begins-with? (request-uri *request*) ,uri)
               :params (list :action-name (name-keyword (trim-left ,uri (request-uri *request*)))
                             :action-args (loop for prm in (post-parameters *request*)
                                             collect (name-keyword (car prm))

@@ -1,5 +1,5 @@
 (defpackage #:wsf
-  (:use #:common-lisp #:hunchentoot #:dc-bin #:kgb)
+  (:use #:cl #:cl-blackjack #:hunchentoot #:kgb)
   (:shadow #:acceptor #:content-type)
   (:export #:site
            #:site-port #:stop&start ; http
