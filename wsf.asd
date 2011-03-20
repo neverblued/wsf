@@ -7,7 +7,7 @@
   :description "Web Site Framework"
   :version "0.2"
   :author "Demetrius Conde <condemetrius@gmail.com>"
-  :depends-on (#:cl-blackjack #:jsun #:hunchentoot #:kgb)
+  :depends-on (#:blackjack #:jsun #:hunchentoot #:kgb)
   :serial t
   :components ((:file "container")
                (:file "selector")
