@@ -70,10 +70,13 @@
 (defmethod selection-predicate ((route route) (request request))
   (funcall (route-clause route) request))
 
+(defvar *route*)
+
 (defmethod succeed-selection ((controller controller) (request request) (route route))
   (let ((action (route-action route)))
     (if action
-        (apply action (route-args route request))
+        (let ((*route* route))
+          (apply action (route-args route request)))
         (fail-selection controller request))))
 
 ;;; link

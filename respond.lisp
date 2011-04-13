@@ -33,10 +33,10 @@
 (defmethod default-response (site request)
   (declare (ignore site request))
   (make-instance 'text-response
-                 :content "Unfortunately, the website has no appropriate content for your request (404)."))
+                 :content "Сервер не знает, как ответить (ошибка 404)."))
 
 (defmethod failure-response (site request condition)
   (declare (ignore site request))
   (make-instance 'html-response
-                 :title "Server failure"
-                 :content (format nil "<h1>Server failure</h1><p>~a</p>" condition)))
+                 :title "Отказ сервера"
+                 :content (format nil "<h1>Отказ сервера</h1><p>~a</p><p>:( <big>&rarr;</big> <a href='/'>:)</a></p>" condition)))

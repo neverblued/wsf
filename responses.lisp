@@ -18,7 +18,7 @@
 (defgeneric content (response))
 (defgeneric content-type (response))
 (defgeneric charset (response))
-(defgeneric return-code (response))
+(defgeneric status (response))
 
 (defmethod send (response)
   (content response))
@@ -33,12 +33,12 @@
 
 (defmethod send :before (response)
   (when (boundp '*reply*)
-    (setf (return-code* *reply*)                (return-code response)
+    (setf (return-code* *reply*)                (status response)
           (content-type* *reply*)               (format-content-type response)
           *hunchentoot-default-external-format* (charset-instance (charset response)))))
 
 (defclass response ()
-  ((return-code :initarg :return-code :accessor return-code :initform +http-ok+)
+  ((status :initarg :status :accessor status :initform +http-ok+)
    (charset :initarg :charset :accessor charset :initform :utf-8)))
 
 (pushnew +http-not-found+ *approved-return-codes*)
