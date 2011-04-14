@@ -20,4 +20,5 @@
                (:file "controller")
                (:file "ajax")
                (:file "site")
-               (:file "debug")))
+               (:file "debug")
+               (:file "goals")))

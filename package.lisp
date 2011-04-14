@@ -9,4 +9,5 @@
            #:set-route #:controller #:with-request #:link ; controller
            #:set-ajax-route #:set-ajax #:set-ajax-route #:respond-ajax #:ajax-win #:ajax-fail ; ajax
            #:set-auth-cookie #:kill-auth-cookie #:auth-cookie-life ; kgb
+           #:goals #:achieve #:goal #:goal-alias #:goal-link #:goal-time #:goal-user #:goal-ip ; goals
            ))
