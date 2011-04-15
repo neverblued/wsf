@@ -32,11 +32,13 @@
 
 (defmethod default-response (site request)
   (declare (ignore site request))
-  (make-instance 'text-response
+  (make-instance 'html-response
+                                 :status +http-not-found+
                  :content "Сервер не знает, как ответить (ошибка 404)."))
 
 (defmethod failure-response (site request condition)
   (declare (ignore site request))
   (make-instance 'html-response
+                 :status +http-internal-server-error+
                  :title "Отказ сервера"
-                 :content (format nil "<h1>Отказ сервера</h1><p>~a</p><p>:( <big>&rarr;</big> <a href='/'>:)</a></p>" condition)))
+                 :content (format nil "<center><h1>Отказ сервера</h1><big><p>~a</p><p>:( <big>&rarr;</big> <a href='/'>:)</a></p></big><center>" condition)))

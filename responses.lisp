@@ -1,5 +1,8 @@
 (in-package #:wsf)
 
+(pushnew +http-not-found+ *approved-return-codes*)
+(pushnew +http-internal-server-error+ *approved-return-codes*)
+
 ;; charset
 
 (defparameter *charsets* `(
@@ -14,14 +17,18 @@
 
 ;;; response
 
-(defgeneric send (response))
 (defgeneric content (response))
 (defgeneric content-type (response))
 (defgeneric charset (response))
 (defgeneric status (response))
 
-(defmethod send (response)
-  (content response))
+(defun send (response)
+  (let ((content (content response)))
+    (when (boundp '*reply*)
+      (setf (return-code* *reply*)                (status response)
+            (content-type* *reply*)               (format-content-type response)
+            *hunchentoot-default-external-format* (charset-instance (charset response))))
+    content))
 
 (defmethod content (response)
   (format nil "Hello, ~a!" (gensym "WORLD")))
@@ -31,17 +38,9 @@
           (content-type response)
           (charset-string (charset response))))
 
-(defmethod send :before (response)
-  (when (boundp '*reply*)
-    (setf (return-code* *reply*)                (status response)
-          (content-type* *reply*)               (format-content-type response)
-          *hunchentoot-default-external-format* (charset-instance (charset response)))))
-
 (defclass response ()
   ((status :initarg :status :accessor status :initform +http-ok+)
    (charset :initarg :charset :accessor charset :initform :utf-8)))
-
-(pushnew +http-not-found+ *approved-return-codes*)
 
 ;;; file response
 
@@ -53,6 +52,11 @@
 
 (defmethod content ((response file-response))
   (pathname-content (file-path response) :binary t))
+  ;(multiple-value-bind (content cached?)
+  ;    (pathname-content (file-path response) :binary t)
+  ;  (when cached?
+  ;    (setf (status response) +http-not-modified+))
+  ;  content))
 
 ;;; text response
 
@@ -74,14 +78,14 @@
 (defgeneric format-html-style (html-response))
 (defgeneric format-html-script (html-response))
 
-(defmethod send ((response html-response))
+(defmethod content ((response html-response))
   (format nil "<!DOCTYPE html><html><head><title>~a</title>~{~a~}</head><body>~a</body></html>"
           (title response)
           (list (format-html-meta response)
                 (format-html-style response)
                 (format-html-script response)
                 (html-link "/images/favicon.ico" :rel "shortcut icon" :type "image/x-icon"))
-          (content response)))
+          (slot-value response 'content)))
 
 ;; link
 
