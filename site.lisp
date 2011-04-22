@@ -20,7 +20,7 @@
 (defmethod close-site (site)
   (release-port (site-port site)))
 
-(defclass site ()
+(defclass site (kgb::system)
   ((port :initform (next-free-port) :initarg :port :accessor site-port)
    (docroot :initform (user-homedir-pathname) :initarg :docroot :accessor site-docroot)
    (controller :initform (make-instance 'controller) :reader site-controller)

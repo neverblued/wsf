@@ -30,6 +30,6 @@
                              :alias (getf data :alias)
                              :link (getf data :link)
                              :time (getf data :time)
-                             :user (kgb::alias-person (getf data :user))
+                             :user (kgb::alias-user (getf data :user))
                              :ip (getf data :ip)))
             (load-from-file storage))))

@@ -9,8 +9,9 @@
 
 (defmethod respond :around (site request)
   (let ((*site* site) (*request* request) *response*)
-    (kgb::with-authentication request
-      (catch 'response (call-next-method)))
+    (kgb::with-system site
+      (kgb::with-authentication request
+        (catch 'response (call-next-method))))
     (send (typecase *response*
             (response *response*)
             (t (default-response site request))))))
