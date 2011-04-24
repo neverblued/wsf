@@ -1,9 +1,22 @@
 (in-package #:wsf)
 
-;; mode
-
 (defclass acceptor (hunchentoot::acceptor)
-  ((accepting? :initform nil :accessor accepting?)))
+  ((accepting? :accessor accepting? :initform nil)
+   (sites :accessor acceptor-sites :initform nil)))
+
+(defmethod initialize-instance :after ((acceptor acceptor) &key)
+  (setf (acceptor-request-dispatcher acceptor)
+        (lambda (request)
+          (aif (find (host request) (acceptor-sites acceptor) :key #'site-host :test #'string=)
+               (respond it request)
+               (error 'unacceptable-host :host (host request)))))
+  (start acceptor))
+
+(defvar acceptors (make-hash-table))
+
+(defparameter first-port 8666)
+
+;; mode
 
 (defmethod start :around ((acceptor acceptor))
   (unless (accepting? acceptor)
@@ -25,32 +38,28 @@
 
 ;; port
 
-(defvar *port->acceptor* (make-hash-table))
-
-(macrolet ((acceptor (port)
-             `(gethash ,port *port->acceptor*)))
-
-  (defun port-acceptor (port)
-    (or (acceptor port)
-        (setf (acceptor port)
-              (make-instance 'acceptor :port port))))
-
-  (defun port-free? (port)
-    (null (acceptor port)))
-
-  (defgeneric release-port (port))
-
-  (defmethod release-port :before (port)
-    (let ((acceptor (acceptor port)))
-      (when acceptor
-        (stop acceptor)))))
-
-(defmethod release-port (port)
-  (remhash port *port->acceptor*))
-
-(defparameter *first-port* 8123)
+(defun port-free? (port)
+  (null (gethash port acceptors)))
 
 (defun next-free-port ()
-  (do ((port *first-port* (1+ port)))
+  (do ((port first-port (1+ port)))
       ((port-free? port)
        port)))
+
+(defgeneric release-port (port))
+
+(defmethod release-port :before (port)
+  (awhen (gethash port acceptors)
+    (stop it)))
+
+(defmethod release-port (port)
+  (remhash port acceptors))
+
+;; acceptors
+
+(defun acceptor (&optional (port (next-free-port)))
+  (let ((acceptor (gethash port acceptors)))
+    (or acceptor
+        (let ((acceptor (make-instance 'acceptor :port port)))
+          (setf (gethash port acceptors) acceptor)
+          acceptor))))

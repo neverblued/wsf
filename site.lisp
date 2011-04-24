@@ -1,30 +1,33 @@
 (in-package #:wsf)
 
-(defgeneric open-site (site))
-(defgeneric close-site (site))
-
 (defgeneric site-port (site))
-(defgeneric site-acceptor (site))
+(defgeneric site-host (site))
+(defgeneric site-docroot (site))
+(defgeneric site-controller (site))
 
-(defmethod site-acceptor (site)
-  (port-acceptor (site-port site)))
+(defgeneric ajax-actions (site))
 
-(defmethod open-site :before (site)
-  (stop&start (site-acceptor site)))
+(defun site-acceptor (site)
+  (acceptor (site-port site)))
 
-(defmethod open-site (site)
+(defun open-site (site)
+  (pushnew site (acceptor-sites (site-acceptor site)))
   (setf (acceptor-request-dispatcher (site-acceptor site))
         (lambda (request)
           (respond site request))))
 
-(defmethod close-site (site)
-  (release-port (site-port site)))
+(defun close-site (site)
+  (let ((acceptor (site-acceptor site)))
+    (when (< 0 (length (setf (acceptor-sites acceptor)
+                             (delete site (acceptor-sites acceptor)))))
+      (release-port (site-port site)))))
 
 (defclass site (kgb::system)
-  ((port :initform (next-free-port) :initarg :port :accessor site-port)
-   (docroot :initform (user-homedir-pathname) :initarg :docroot :accessor site-docroot)
-   (controller :initform (make-instance 'controller) :reader site-controller)
-   (ajax-actions :initform (make-hash-table) :accessor ajax-actions)))
+  ((port :initarg :port :accessor site-port :initform (error "Need port!"))
+   (host :initarg :host :accessor site-host :initform (error "Need host!"))
+   (docroot :initarg :docroot :accessor site-docroot :initform (user-homedir-pathname))
+   (controller :reader site-controller :initform (make-instance 'controller))
+   (ajax-actions :accessor ajax-actions :initform (make-hash-table))))
 
 (defmethod initialize-instance :after ((site site) &key)
   (set-ajax-route site))

@@ -2,7 +2,7 @@
   (:use #:cl #:cl-blackjack #:hunchentoot #:kgb)
   (:shadow #:acceptor #:content-type)
   (:export #:site
-           #:site-port #:stop&start ; http
+           #:site-host #:site-port #:stop&start #:open-site #:close-site ; http
            #:site-docroot #:from-docroot ; files
            #:*site* #:*request* #:*response* #:send ; respond
            #:default-response #:failure-response #:file-response #:text-response #:html-response ; responses

@@ -34,7 +34,7 @@
 (defmethod default-response (site request)
   (declare (ignore site request))
   (make-instance 'html-response
-                                 :status +http-not-found+
+                 :status +http-not-found+
                  :content "Сервер не знает, как ответить (ошибка 404)."))
 
 (defmethod failure-response (site request condition)

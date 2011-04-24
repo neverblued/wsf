@@ -12,6 +12,7 @@
   :components ((:file "container")
                (:file "selector")
                (:file "package")
+               (:file "conditions")
                (:file "http")
                (:file "files")
                (:file "responses")

@@ -84,7 +84,7 @@
           (list (format-html-meta response)
                 (format-html-style response)
                 (format-html-script response)
-                (html-link "/images/favicon.ico" :rel "shortcut icon" :type "image/x-icon"))
+                (html-link "/favicon.ico" :rel "shortcut icon" :type "image/x-icon"))
           (slot-value response 'content)))
 
 ;; link
