@@ -2,6 +2,9 @@
 
 (pushnew +http-not-found+ *approved-return-codes*)
 (pushnew +http-internal-server-error+ *approved-return-codes*)
+(setf *handle-http-errors-p* nil)
+(setf *show-lisp-errors-p* t)
+;(setf *show-lisp-backtraces-p* t) ; @bug: no variable - Hunchentoot error?
 
 ;; charset
 
@@ -17,18 +20,29 @@
 
 ;;; response
 
+(defgeneric send (response))
 (defgeneric content (response))
 (defgeneric content-type (response))
 (defgeneric charset (response))
 (defgeneric status (response))
 
-(defun send (response)
-  (let ((content (content response)))
-    (when (boundp '*reply*)
-      (setf (return-code* *reply*)                (status response)
-            (content-type* *reply*)               (format-content-type response)
-            *hunchentoot-default-external-format* (charset-instance (charset response))))
-    content))
+(defun hunchentoot-version ()
+  (slot-value (asdf:find-system "hunchentoot") 'asdf::version))
+
+(defmethod send :before (response)
+  (if (boundp '*reply*)
+      (progn ;(setf (return-code* *reply*)         ; @bug: no effect from *handle-http-errors-p*
+             ;      (status response))
+             (setf (header-out :server)
+                   (format nil "CL-WSF over Hunchentoot ~a" (hunchentoot-version)))
+             (setf (content-type* *reply*)
+                   (format-content-type response))
+             (setf (reply-external-format *reply*) ; @todo: test after *hunchentoot-default-external-format*
+                   (charset-instance (charset response))))
+      (format t "~&Return code: ~a~%" (status response))))
+
+(defmethod send (response)
+  (content response))
 
 (defmethod content (response)
   (format nil "Hello, ~a!" (gensym "WORLD")))
@@ -52,11 +66,13 @@
 
 (defmethod content ((response file-response))
   (pathname-content (file-path response) :binary t))
-  ;(multiple-value-bind (content cached?)
-  ;    (pathname-content (file-path response) :binary t)
-  ;  (when cached?
-  ;    (setf (status response) +http-not-modified+))
-  ;  content))
+
+(defmethod content :around ((response file-response))
+  (multiple-value-bind (content cached?)
+      (call-next-method)
+    (when cached?
+      (setf (status response) +http-not-modified+))
+    content))
 
 ;;; text response
 
@@ -78,14 +94,14 @@
 (defgeneric format-html-style (html-response))
 (defgeneric format-html-script (html-response))
 
-(defmethod content ((response html-response))
+(defmethod content :around ((response html-response))
   (format nil "<!DOCTYPE html><html><head><title>~a</title>~{~a~}</head><body>~a</body></html>"
           (title response)
           (list (format-html-meta response)
                 (format-html-style response)
                 (format-html-script response)
                 (html-link "/favicon.ico" :rel "shortcut icon" :type "image/x-icon"))
-          (slot-value response 'content)))
+          (call-next-method)))
 
 ;; link
 

@@ -8,7 +8,9 @@
 (defvar *response*)
 
 (defmethod respond :around (site request)
-  (let ((*site* site) (*request* request) *response*)
+  (let ((*site* site)
+        (*request* request)
+        *response*)
     (kgb::with-system site
       (kgb::with-authentication request
         (catch 'response (call-next-method))))
@@ -35,7 +37,7 @@
   (declare (ignore site request))
   (make-instance 'html-response
                  :status +http-not-found+
-                 :content "Сервер не знает, как ответить (ошибка 404)."))
+                 :content (format nil "Сервер не знает, как ответить (ошибка 404 ~a)." *handle-http-errors-p*)))
 
 (defmethod failure-response (site request condition)
   (declare (ignore site request))
