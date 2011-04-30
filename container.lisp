@@ -53,10 +53,11 @@
 
   (defmethod take-out ((item containable) (container container))
     (setf (container item) nil)
-    (delete (container-key-sample container item)
-            (container-list container)
-            :key (container-key container)
-            :test (container-test container))))
+    (setf (container-list container)
+          (delete (container-key-sample container item)
+                  (container-list container)
+                  :key (container-key container)
+                  :test (container-test container)))))
 
 (defmethod put-into :around ((item containable) (container container))
   (if (eql container (container item))

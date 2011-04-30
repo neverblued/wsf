@@ -34,7 +34,7 @@
     (route site (make-instance 'request :uri uri :acceptor *acceptor*))))
 
 (defmethod default-response (site request)
-  (declare (ignore site request))
+  (declare (ignore request))
   (make-instance 'html-response
                  :status +http-not-found+
                  :content (format nil "Сервер не знает, как ответить (ошибка 404 ~a)." *handle-http-errors-p*)))
