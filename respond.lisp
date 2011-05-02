@@ -24,8 +24,9 @@
 
 (defmethod respond (site (request request))
   (handler-case (route site request)
-    ((or warning error)
-        (condition)
+    (route-not-found ()
+      (throw-response (default-response site request)))
+    ((or warning error wsf-condition) (condition)
       (throw-response (failure-response site request condition)))))
 
 (defmethod respond (site (uri string))
@@ -37,10 +38,10 @@
   (declare (ignore request))
   (make-instance 'html-response
                  :status +http-not-found+
-                 :content (format nil "Сервер не знает, как ответить (ошибка 404 ~a)." *handle-http-errors-p*)))
+                 :content (format nil "Сервер не знает, как ответить (ошибка 404).")))
 
 (defmethod failure-response (site request condition)
-  (declare (ignore site request))
+  (declare (ignore request))
   (make-instance 'html-response
                  :status +http-internal-server-error+
                  :title "Отказ сервера"

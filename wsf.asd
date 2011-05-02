@@ -9,12 +9,9 @@
   :author "Demetrius Conde <condemetrius@gmail.com>"
   :depends-on (#:blackjack #:jsun #:hunchentoot #:kgb)
   :serial t
-  :components ((:file "container")
-               (:file "selector")
-               (:file "package")
+  :components ((:file "package")
                (:file "conditions")
                (:file "http")
-               (:file "files")
                (:file "responses")
                (:file "kgb")
                (:file "respond")

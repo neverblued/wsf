@@ -1,16 +1,16 @@
 (in-package #:wsf)
 
-(defgeneric ajax-actions (site))
-(defgeneric ajax-action (site action-name))
-(defgeneric (setf ajax-action) (new-action site action-name))
-(defgeneric ajax-response (site action-name action-args))
-
-(defmethod ajax-action (site action-name)
+(defun ajax-action (site action-name)
   (values (gethash action-name (ajax-actions site) nil)))
 
-(defmethod (setf ajax-action) (new-action site action-name)
+(defun (setf ajax-action) (new-action site action-name)
   (setf (gethash action-name (ajax-actions site))
         new-action))
+
+(defun pprint-ajax (site &optional (stream t))
+  (maphash (lambda (action-name func)
+             (format stream "~&~a => ~a~%" action-name func))
+           (ajax-actions site)))
 
 (defun ajax-win (&optional data)
   (append (list :status "win")
@@ -21,27 +21,18 @@
 
 (defvar *warning-log* nil)
 
-(defmethod ajax-response :around (site action-name action-args)
+(defun ajax-response (site action-name action-args)
   (jsun::encode (catch 'ajax-response
-                  (handler-case (call-next-method)
+                  (handler-case (aif (ajax-action site action-name)
+                                     (ajax-win (apply it action-args))
+                                     (error 'undefined-ajax-action :action-name action-name))
                     (warning (condition)
                       (push (cons (get-universal-time) condition) *warning-log*)
                       (muffle-warning condition))
                     (error (condition)
                       (throw 'ajax-response (ajax-fail condition)))))))
 
-(define-condition undefined-ajax-action (error)
-  ((action-name :initarg :action-name :reader condition-action-name))
-  (:report (lambda (condition stream)
-             (format stream "Неизвестное действие ~a." (condition-action-name condition)))))
-
-(defmethod ajax-response (site action-name action-args)
-  (let ((action (ajax-action site action-name)))
-    (if (functionp action)
-        (ajax-win (apply action action-args))
-        (error 'undefined-ajax-action :action-name action-name))))
-
-(defmacro set-ajax-route (site &optional (uri "/ajax/"))
+(defmacro set-ajax-routing (site &optional (uri "/ajax/"))
   `(set-route ,site :ajax
               :args (action-name action-args)
               :link (join ,uri action-name)

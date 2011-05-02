@@ -21,16 +21,14 @@
 
 ;;; route
 
-(defgeneric route (site request))
+(defgeneric route-controller (route))
 (defgeneric route-name (route))
 (defgeneric route-clause (route))
 (defgeneric route-action (route))
 (defgeneric route-encoder (route))
 (defgeneric route-decoder (route))
-(defgeneric route-args (route request))
 
-(defmethod route (site request)
-  (select (site-controller site) request))
+(defgeneric route-args (route request))
 
 (defmethod route-args (route request)
   (let ((decoder (route-decoder route))
@@ -39,70 +37,66 @@
         (append default-args (funcall decoder request))
         default-args)))
 
-(defclass route (containable)
-  ((route-name :initarg :name :accessor route-name)
-   (route-clause :initarg :clause :accessor route-clause)
-   (route-action :initarg :action :accessor route-action)
-   (route-encoder :initarg :encoder :accessor route-encoder)
-   (route-decoder :initarg :decoder :accessor route-decoder)))
+(defclass route ()
+  ((controller :initarg :controller :accessor route-controller)
+   (name :initarg :name :accessor route-name)
+   (clause :initarg :clause :accessor route-clause)
+   (action :initarg :action :accessor route-action)
+   (encoder :initarg :encoder :accessor route-encoder)
+   (decoder :initarg :decoder :accessor route-decoder)))
 
 ;;; controller
 
-(defgeneric site-controller (site))
-
 (defgeneric routes (controller))
-(defgeneric (setf routes) (new-routes controller))
 
-(defclass controller (container)
-  ((container-key :initform #'route-name)))
-
-(defmethod routes (controller)
-  (container-list controller))
-
-(defmethod (setf routes) (new-routes controller)
-  (setf (container-list controller) new-routes))
+(defclass controller ()
+  ((routes :accessor routes :initform nil)))
 
 ;;; selection
 
-(defmethod options ((controller controller))
-  (routes controller))
-
-(defmethod selection-predicate ((route route) (request request))
-  (funcall (route-clause route) request))
-
 (defvar *route*)
 
-(defmethod succeed-selection ((controller controller) (request request) (route route))
-  (let ((action (route-action route)))
-    (if action
-        (let ((*route* route))
-          (apply action (route-args route request)))
-        (fail-selection controller request))))
+(defun route (controller &optional request)
+  (let ((route (car (remove-if-not (lambda (route)
+                                     (funcall (route-clause route) request))
+                                   (routes controller)))))
+    (unless route
+      (error (make-condition 'route-not-found :controller controller :request request)))
+    (let ((action (route-action route)))
+      (unless (functionp action)
+        (error (make-condition 'invalid-action :route route :expected-type 'function :datum action)))
+      (let ((*route* route))
+        (apply action (route-args route request))))))
 
 ;;; link
 
-(defgeneric link (site route-name &optional args)
+(defgeneric link (controller route-name &optional args)
   (:documentation "Make a link."))
 
-(defmethod link (site route-name &optional (args nil))
-  (let ((route (find-containing-key (site-controller site) route-name)))
-    (if route
-        (careful-apply (route-encoder route) args)
-        "/404-broken-link/")))
+(defmethod link (controller route-name &optional (args nil))
+  (aif (find route-name (routes controller) :key #'route-name :test #'equal)
+       (careful-apply (route-encoder it) args)
+       "/404-broken-link/"))
 
 ;; setup
 
-(defmacro set-route (site name &key args link clause params action)
-  `(put-into (make-instance 'route
-                            :name ,name
-                            :encoder (lambda (&key ,@args)
-                                       ,(when args `(declare (ignorable ,@args)))
-                                       ,link)
-                            :clause (lambda (*request*)
-                                      ,(aif clause it `(string= (request-uri *request*) ,link)))
-                            :decoder (lambda (*request*)
-                                       ,(awhen params it))
-                            :action (lambda (&key *request* ,@args)
-                                      ,(when args `(declare (ignorable ,@args)))
-                                      ,action))
-             (site-controller ,site)))
+(defmacro set-route (controller name &key args link clause params action)
+  `(progn (setf (routes ,controller)
+                (delete ,name (routes ,controller) :key #'route-name :test #'equal))
+          (push (make-instance 'route
+                               :name ,name
+                               :encoder (lambda (&key ,@args)
+                                          ,(when args `(declare (ignorable ,@args)))
+                                          ,link)
+                               :clause (lambda (*request*)
+                                         ,(aif clause it `(string= (request-uri *request*) ,link)))
+                               :decoder (lambda (*request*)
+                                          ,(awhen params it))
+                               :action (lambda (&key *request* ,@args)
+                                         ,(when args `(declare (ignorable ,@args)))
+                                         ,action))
+                (routes ,controller))))
+
+(defun unset-route (controller name)
+  (setf (routes controller)
+        (delete name (routes controller) :key #'route-name :test #'equal)))
