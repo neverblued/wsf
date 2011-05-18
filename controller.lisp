@@ -1,24 +1,5 @@
 (in-package #:wsf)
 
-;;; clause
-
-(defmacro make-clause (get test example)
-  `(list #',get #',test ,example))
-
-(defun clause-get (clause)
-  (first clause))
-
-(defun clause-test (clause)
-  (second clause))
-
-(defun clause-example (clause)
-  (third clause))
-
-(defun clause-match? (clause request)
-  (funcall (clause-test clause)
-           (funcall (clause-get clause) request)
-           (clause-example clause)))
-
 ;;; route
 
 (defgeneric route-controller (route))
@@ -32,10 +13,10 @@
 
 (defmethod route-args (route request)
   (let ((decoder (route-decoder route))
-        (default-args (list :*request* request)))
+        (args (list :*request* request)))
     (if decoder
-        (append default-args (funcall decoder request))
-        default-args)))
+        (append args (funcall decoder request))
+        args)))
 
 (defclass route ()
   ((controller :initarg :controller :accessor route-controller)
@@ -73,10 +54,12 @@
 (defgeneric link (controller route-name &optional args)
   (:documentation "Make a link."))
 
+(defparameter broken-link "/404-broken-link/")
+
 (defmethod link (controller route-name &optional (args nil))
   (aif (find route-name (routes controller) :key #'route-name :test #'equal)
        (careful-apply (route-encoder it) args)
-       "/404-broken-link/"))
+       broken-link))
 
 ;; setup
 

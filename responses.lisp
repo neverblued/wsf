@@ -1,78 +1,52 @@
 (in-package #:wsf)
 
-(pushnew +http-not-found+ *approved-return-codes*)
-(pushnew +http-internal-server-error+ *approved-return-codes*)
-(setf *handle-http-errors-p* nil)
-(setf *show-lisp-errors-p* t)
-;(setf *show-lisp-backtraces-p* t) ; @bug: no variable - Hunchentoot error?
-
 ;; charset
 
 (defparameter *charsets* `(
                            (:utf-8 (,hunchentoot::+utf-8+ "utf-8"))
                            ))
 
-(defun charset-instance (charset)
-  (first (find-assoc charset *charsets* :test #'eql)))
+(flet ((? (charset)
+         (find-assoc charset *charsets* :test #'eql)))
 
-(defun charset-string (charset)
-  (second (find-assoc charset *charsets* :test #'eql)))
+  (defun charset-instance (charset)
+    (first (? charset)))
+
+  (defun charset-string (charset)
+    (second (? charset))))
 
 ;;; response
 
-(defgeneric send (response))
 (defgeneric content (response))
 (defgeneric content-type (response))
 (defgeneric charset (response))
 (defgeneric status (response))
 
-(defun hunchentoot-version ()
-  (slot-value (asdf:find-system "hunchentoot") 'asdf::version))
+(defun set-reply (response)
+  (flet ((format-content-type (response &optional stream)
+           (format stream "~a; charset=~a" (content-type response) (charset-string (charset response))))
+         (hunchentoot-version ()
+           (slot-value (asdf:find-system "hunchentoot") 'asdf::version)))
+    (setf (return-code*) (status response)
+          (reply-external-format*) (charset-instance (charset response))
+          (content-type*) (format-content-type response)
+          (header-out :server) (format nil "WSF over Hunchentoot ~a" (hunchentoot-version)))))
 
-(defmethod send :before (response)
-  (if (boundp '*reply*)
-      (progn ;(setf (return-code* *reply*)         ; @bug: no effect from *handle-http-errors-p*
-             ;      (status response))
-             (setf (header-out :server)
-                   (format nil "CL-WSF over Hunchentoot ~a" (hunchentoot-version)))
-             (setf (content-type* *reply*)
-                   (format-content-type response))
-             (setf (reply-external-format *reply*) ; @todo: test after *hunchentoot-default-external-format*
-                   (charset-instance (charset response))))
-      (format t "~&Return code: ~a~%" (status response))))
+(defgeneric send (response))
 
 (defmethod send (response)
-  (content response))
+  (let ((content (content response)))
+    (if (and (within-request-p) (boundp '*reply*))
+        (set-reply response)
+        (format t "~&Return code: ~a~%" (status response)))
+    content))
 
 (defmethod content (response)
   (format nil "Hello, ~a!" (gensym "WORLD")))
 
-(defun format-content-type (response)
-  (format nil "~a; charset=~a"
-          (content-type response)
-          (charset-string (charset response))))
-
 (defclass response ()
   ((status :initarg :status :accessor status :initform +http-ok+)
    (charset :initarg :charset :accessor charset :initform :utf-8)))
-
-;;; file response
-
-(defclass file-response (response)
-  ((file-path :initarg :file-path :accessor file-path)))
-
-(defmethod content-type ((response file-response))
-  (mime-type (file-path response)))
-
-(defmethod content ((response file-response))
-  (pathname-content (file-path response) :binary t))
-
-(defmethod content :around ((response file-response))
-  (multiple-value-bind (content cached?)
-      (call-next-method)
-    (when cached?
-      (setf (status response) +http-not-modified+))
-    content))
 
 ;;; text response
 
@@ -88,7 +62,8 @@
    (content :initform "<h1>Hello, world!</h1><p>I'm a <i>markup</i>.</p>")
    (meta-content :initarg :meta :accessor meta-content :initform nil)
    (style :initarg :style :accessor style :initform nil)
-   (script :initarg :script :accessor script :initform nil)))
+   (script :initarg :script :accessor script :initform nil)
+   (appendix :initarg :appendix :accessor appendix :initform nil)))
 
 (defgeneric format-html-meta (html-response))
 (defgeneric format-html-style (html-response))
@@ -97,10 +72,11 @@
 (defmethod content :around ((response html-response))
   (format nil "<!DOCTYPE html><html><head><title>~a</title>~{~a~}</head><body>~a</body></html>"
           (title response)
-          (list (format-html-meta response)
+          (list (html-link "/favicon.ico" :rel "shortcut icon" :type "image/x-icon")
+                (format-html-meta response)
                 (format-html-style response)
                 (format-html-script response)
-                (html-link "/favicon.ico" :rel "shortcut icon" :type "image/x-icon"))
+                (or (appendix response) ""))
           (call-next-method)))
 
 ;; link
@@ -122,8 +98,8 @@
 (defun html-script (href &key type)
   (format nil "<script type='~a' src='~a'></script>" type href))
 
-(defun html-include-javascript (path-base &optional (type "text/javascript"))
-  (html-script (join "/js/" path-base ".js") :type type))
+(defun html-include-javascript (path &optional (type "text/javascript"))
+  (html-script (if (ppcre:scan "^http://" path) path (join "/js/" path ".js")) :type type))
 
 (defmethod format-html-script ((response html-response))
   (aif (script response)

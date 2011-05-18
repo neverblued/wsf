@@ -1,6 +1,6 @@
 (in-package #:wsf)
 
-(defparameter auth-cookie-name "authentication-checksum")
+(defparameter auth-cookie-name "authentication-seal")
 
 (defparameter max-auth-cookie-life (* 365 24 60 60))
 
@@ -18,7 +18,7 @@
 
 (defun set-auth-cookie (user)
   (set-cookie auth-cookie-name
-              :value (kgb::ausweis user)
+              :value (kgb::seal user)
               :expires (+ (get-universal-time) (auth-period user))
               :path "/"))
 
@@ -32,4 +32,12 @@
   (let ((*request* request))
     (start-session)
     (awhen (cookie-in auth-cookie-name)
-      (kgb::ausweis-user it))))
+      (kgb::seal-person it))))
+
+(defmethod kgb::guest-password ((request request))
+  (session-cookie-value *session*))
+
+(defmethod kgb::introduce-guest :around ((request request))
+  (let ((guest (call-next-method)))
+    (set-auth-cookie guest)
+    guest))

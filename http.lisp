@@ -2,6 +2,18 @@
 
 (defparameter default-port 8666)
 
+(setf *message-log-pathname*  (pathname "/home/lisp/log/message.log")
+      *access-log-pathname*   (pathname "/home/lisp/log/access.log")
+      *log-lisp-errors-p*     t
+      *log-lisp-backtraces-p* t
+      *approved-return-codes* (union *approved-return-codes*
+                                     (list +http-not-found+
+                                           +http-internal-server-error+))
+      *handle-http-errors-p*  t
+      *show-lisp-errors-p*    t
+      ;*show-lisp-backtraces-p* t ; @bug: Undefined variable.
+      )
+
 ;; acceptors
 
 (defvar acceptors nil)
@@ -32,22 +44,24 @@
   ((accepting? :reader accepting? :initform nil)
    (site :initarg :site :accessor acceptor-site :initform nil)))
 
+(let ((handler #'handle-request))
+  (fmakunbound 'handle-request)
+  (defgeneric handle-request (acceptor request))
+  (defmethod handle-request (acceptor request)
+    (funcall handler acceptor request)))
+
+(defmethod handle-request :around ((acceptor acceptor) request)
+  (or (respond (acceptor-site acceptor) request)
+      (call-next-method)))
+
 (defmethod initialize-instance :after ((acceptor acceptor) &key)
   (pushnew acceptor acceptors)
   (start acceptor))
 
-(defmethod acceptor-request-dispatcher ((acceptor acceptor))
-  (lambda (request)
-    (respond (acceptor-site acceptor) request)))
-
-(defun site-acceptor (site)
+(defun fetch-acceptor (site)
   (with-accessors ((port site-port) (domain site-domain)) site
     (or (let ((result (acceptors :domain domain :port port)))
-          ;(awhen (rest result)           ; this sucks because of wildcart
-          ;  (mapcar #'kill-acceptor it))
-          (awhen (first result)
-            (setf (acceptor-site it) site)
-            it))
+          (awhen (first result) it))
         (make-instance 'acceptor
                        :site site
                        :address domain
