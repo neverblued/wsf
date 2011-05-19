@@ -13,9 +13,8 @@
         *response*)
     (catch 'response
       (with-site-db site
-        (kgb::with-system site
-          (kgb::with-authentication request
-            (call-next-method)))))
+        (kgb::with-authentication request
+          (call-next-method))))
     (send (typecase *response*
             (response *response*)
             (string (make-instance 'text-response :content (join "Ответ сервера: " *response*)))

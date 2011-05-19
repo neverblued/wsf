@@ -10,7 +10,7 @@
 (defun from-docroot (site relative-path)
   (join (site-docroot site) "/" relative-path))
 
-(defclass site (kgb::system controller)
+(defclass site (controller)
   ((domain :initarg :domain :accessor site-domain :initform nil)
    (port :initarg :port :accessor site-port :initform default-port)
    (acceptor :accessor site-acceptor)
