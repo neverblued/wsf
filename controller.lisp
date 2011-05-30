@@ -10,6 +10,7 @@
 (defgeneric route-decoder (route))
 
 (defgeneric route-args (route request))
+(defvar *route-args*)
 
 (defmethod route-args (route request)
   (let ((decoder (route-decoder route))
@@ -23,7 +24,7 @@
    (name :initarg :name :accessor route-name)
    (clause :initarg :clause :accessor route-clause)
    (action :initarg :action :accessor route-action)
-   (encoder :initarg :encoder :accessor route-encoder)
+   (link :initarg :link :accessor route-link)
    (decoder :initarg :decoder :accessor route-decoder)))
 
 ;;; controller
@@ -58,26 +59,46 @@
 
 (defmethod link (controller route-name &optional (args nil))
   (aif (find route-name (routes controller) :key #'route-name :test #'equal)
-       (careful-apply (route-encoder it) args)
+       (careful-apply (route-link it) args)
        broken-link))
 
 ;; setup
 
-(defmacro set-route (controller name &key args link clause params action)
+(defmacro set-route (controller name &key args track link clause params action)
   `(progn (setf (routes ,controller)
                 (delete ,name (routes ,controller) :key #'route-name :test #'equal))
           (push (make-instance 'route
                                :name ,name
-                               :encoder (lambda (&key ,@args)
-                                          ,(when args `(declare (ignorable ,@args)))
-                                          ,link)
+                               :link (lambda (&key ,@args)
+                                       (declare (ignorable ,@args))
+                                       (let (track)
+                                         (iter (for (arg . params) in ',track)
+                                               (when (listp params)
+                                                 (awhen (getf params :save)
+                                                   (set arg (eval it))))
+                                               (let ((arg-name (string-downcase (symbol-name arg))))
+                                                 (awhen (or (symbol-value arg) (get-parameter arg-name))
+                                                   (setf (getf track arg-name) it))))
+                                         (awhen (bj:split-once "#" ,link)
+                                           (let* ((get-parameters (format nil "~{~{~a~^=~}~^&~}" (group track 2)))
+                                                  (script-name (if track
+                                                                   (join (first it) "?" get-parameters)
+                                                                   (first it)))
+                                                  (fragment (second it)))
+                                             (if fragment
+                                                 (join script-name "#" fragment)
+                                                 script-name)))))
                                :clause (lambda (*request*)
-                                         ,(aif clause it `(string= (request-uri *request*) ,link)))
+                                         ,(aif clause it `(string= (script-name*) ,link)))
                                :decoder (lambda (*request*)
                                           ,(awhen params it))
                                :action (lambda (&key *request* ,@args)
-                                         ,(when args `(declare (ignorable ,@args)))
-                                         ,action))
+                                         (declare (ignorable ,@args))
+                                         (let (*route-args*)
+                                           ,@(iter (for arg in args)
+                                                   (collect `(setf (getf *route-args* ,(name-keyword (symbol-name arg)))
+                                                                   ,arg)))
+                                           ,action)))
                 (routes ,controller))))
 
 (defun unset-route (controller name)
