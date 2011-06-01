@@ -10,7 +10,7 @@
 (defun from-docroot (site relative-path)
   (join (site-docroot site) "/" relative-path))
 
-(defclass site (controller)
+(defclass site (router)
   ((domain :initarg :domain :accessor site-domain :initform nil)
    (port :initarg :port :accessor site-port :initform default-port)
    (acceptor :accessor site-acceptor)
@@ -20,7 +20,7 @@
 
 (defmethod initialize-instance :after ((site site) &key)
   (setf (site-acceptor site) (fetch-acceptor site))
-  (set-ajax-routing site)
+  (with-router site (set-ajax-routing))
   (start site))
 
 (defmethod start ((site site))

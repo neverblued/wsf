@@ -21,6 +21,11 @@
 
 ;; route
 
+(define-condition no-response (wsf-condition)
+  ((router :initarg :router :reader condition-router)
+   (route :initarg :route :reader condition-route)
+   (request :initarg :request :reader condition-request)))
+
 (define-condition route-not-found (wsf-condition)
   ((controller :initarg :controller :reader condition-controller)
    (request :initarg :request :reader condition-request)))
@@ -28,7 +33,7 @@
 (define-condition invalid-action (wsf-condition type-error)
   ((route :initarg :route :reader condition-route)))
 
-(define-condition undefined-ajax-action (error)
+(define-condition undefined-ajax-action (error wsf-condition)
   ((action-name :initarg :action-name :reader condition-action-name))
   (:report (lambda (condition stream)
              (format stream "Неизвестное действие ~a." (condition-action-name condition)))))

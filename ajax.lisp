@@ -32,16 +32,17 @@
                     (error (condition)
                       (throw 'ajax-response (ajax-fail condition)))))))
 
-(defmacro set-ajax-routing (site &optional (uri "/ajax/"))
-  `(set-route ,site :ajax
+(defmacro set-ajax-routing (&optional (uri "/ajax/"))
+  `(set-route :ajax
               :args (action-name action-args)
               :link (join ,uri action-name)
-              :clause (begins-with? (request-uri *request*) ,uri)
-              :params (list :action-name (name-keyword (trim-left ,uri (request-uri *request*)))
-                            :action-args (loop for prm in (post-parameters *request*)
-                                            collect (name-keyword (car prm))
-                                            collect (cdr prm)))
-              :action (setf *response* (make-instance 'text-response :content (ajax-response ,site action-name action-args)))))
+              :clause (begins-with? (script-name*) ,uri)
+              :params (list :action-name (name-keyword (trim-left ,uri (script-name*)))
+                            :action-args (iter (for prm in (post-parameters*))
+                                               (collect (name-keyword (car prm)))
+                                               (collect (cdr prm))))
+              :action (make-instance 'text-response
+                                     :content (ajax-response *site* action-name action-args))))
 
 (defmacro set-ajax (site action-name action-args &body action-body)
   `(setf (ajax-action ,site ,action-name)
