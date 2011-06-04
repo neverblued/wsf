@@ -20,7 +20,6 @@
 
 (defmethod initialize-instance :after ((site site) &key)
   (setf (site-acceptor site) (fetch-acceptor site))
-  (with-router site (set-ajax-routing))
   (start site))
 
 (defmethod start ((site site))

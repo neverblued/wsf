@@ -1,122 +1,304 @@
 (in-package #:wsf)
 
+;; current specials
+
+(defvar *route* nil "Текущий маршрут")
+
+(defvar *routes* nil "Список пройденных маршрутов")
+
+(defvar *router* nil "Текущий маршрутизатор")
+
 ;; route
 
 (defclass route ()
   ((name :initarg :name :accessor route-name)
    (follow :initarg :follow :accessor route-follow)
+   (args :initarg :args :accessor route-args :initform nil)
    (clause :initarg :clause :accessor route-clause)
    (action :initarg :action :accessor route-action)
-   (link :initarg :link :accessor route-link)
-   (decoder :initarg :decoder :accessor route-decoder)))
+   (link :initarg :link :accessor route-link)))
 
-(defvar *parameters*)
+(defmethod print-object ((route route) stream)
+  (format stream "#<ROUTE:~a>" (route-name route)))
 
-(defun *parameters* (route)
-  (awhen (route-decoder route)
-    (funcall it)))
-
-(defvar *routes* nil "Currently active routes")
-
-(defvar *route* nil "Currently active route")
-
-(defgeneric *route* (key)
-  (:documentation "Find active route"))
-
-(defmethod *route* ((key route))
-  (find key *routes*))
-
-(defmethod *route* ((key symbol))
-  (find key *routes* :key #'route-name :test #'equal))
-
-(defmethod *route* ((key string))
-  (*route* (name-keyword key)))
-
-(defmethod *route* ((key list))
-  (remove-if-not #'*route* key))
-
-(defmethod *route* ((key (eql t)))
-  t)
+(defgeneric route (key)
+  (:documentation "Искать маршрут по ключу в текущем списке."))
 
 ;; router
-
-(defvar *router* nil "Currently active router")
 
 (defclass router ()
   ((routes :accessor routes :initform nil)))
 
 (defmacro with-router (router &body body)
-  "Evaluate in *ROUTER* binding"
+  "Создать окружение маршрутизатора"
   `(let ((*router* ,router))
      (assert-type *router* 'router)
      ,@body))
 
-(defun route (key)
-  (let ((*routes* (routes *router*)))
-    (*route* key)))
+(defmacro with-router-routes (&body body)
+  `(let ((*routes* (routes *router*)))
+     ,@body))
 
-(defun route! ()
-  (iter (for route in (set-difference (routes *router*) *routes*))
-        (when (and (*route* (route-follow route))
-                   (funcall (route-clause route)))
-          (let ((*routes* (adjoin route *routes*)))
-            (leave (aif (route-action route)
-                        (let ((*route* route))
-                          (apply it (*parameters* route)))
-                        (route!)))))))
+;; search
+
+(defmethod route ((key route))
+  "Искать данный маршрут"
+  (find key *routes*))
+
+(defmethod route ((key symbol))
+  "Искать по имени в виде ключевого слова"
+  (find key *routes* :key #'route-name :test #'equal))
+
+(defmethod route ((key string))
+  "Искать по имени в виде строки"
+  (route (name-keyword key)))
+
+(defmethod route ((keys list))
+  "Список результатов поиска маршрутов по очереди списка ключей"
+  (remove nil (mapcar #'route keys)))
+
+(defmethod route ((key (eql t)))
+  "T такое Т"
+  t)
+
+(defgeneric route? (key)
+  (:documentation "Существует ли маршрут по ключу в списке?"))
+
+(defmethod route? :around (key)
+  (declare (ignore key))
+  (true? (call-next-method)))
+
+(defmethod route? (key)
+  (route key))
+
+(defmethod route? ((keys list))
+  "Существуют ли все маршруты по списку ключей?"
+  (every #'route keys))
+
+(defun spare-routes ()
+  "Список доступных маршрутов из текущего положения"
+  (iter (for route in (routes *router*))
+        (unless (route? route)
+          (collect route))))
+
+;; action
+
+(defmacro with-route (route &body body)
+  `(let* ((*route* ,route)
+          (*routes* (adjoin *route* *routes*)))
+     ,@body))
+
+(defun call-route (route)
+  (with-route route
+    (funcall (route-action route))))
+
+(defun may-follow? (route)
+  (route? (route-follow route)))
+
+(defun clause-fits? (route)
+  (funcall (route-clause route)))
+
+(defun find-next-route ()
+  (iter (for route in (spare-routes))
+        (when (and (may-follow? route)
+                   (clause-fits? route))
+          (leave route))))
+
+(defun find-default-route ()
+  (with-router-routes (route :default)))
+
+(defun call-next-route ()
+  (call-route (or (find-next-route)
+                  (find-default-route)
+                  (error 'route-not-found
+                         :router *router*
+                         :request *request*))))
+
+;; plist
+
+(defun unique-plist (plist)
+  (let (result)
+    (iter (for (key value) in (group plist 2))
+          (unless (getf result key)
+            (setf (getf result key) value)))
+    result))
+
+(defun extend-plist (origin patch)
+  (let (result)
+    (iter (for (key value) in (group (append origin patch) 2))
+          (setf (getf result key) value))
+    result))
+
+;; pookies
+
+(defvar *pookies* nil "Список текущих пуков")
+
+(defclass pookie ()
+  ((key :initarg :key :accessor pookie-key)
+   (var :initarg :var :accessor pookie-var)
+   (source :initarg :source :accessor pookie-source)
+   (default :initarg :default :accessor pookie-default :initform nil)
+   (encoder :initarg :encoder :accessor pookie-encoder :initform nil)))
+
+(defun pookie-value (pookie)
+  (or (funcall (pookie-source pookie))
+      (funcall (pookie-default pookie))))
+
+(defmacro with-pookie ((key var source &optional default encoder) &body body)
+  (with-gensyms (^key^ ^pookie^)
+    `(let* ((,^key^ (string-downcase (symbol-name ',key)))
+            (,^pookie^ (make-instance 'pookie
+                                      :key (symbol-keyword ',key)
+                                      :var ',var
+                                      :source (lambda ()
+                                                (flet ((pookie-origin ()
+                                                         (or (get-parameter ,^key^)
+                                                             (post-parameter ,^key^))))
+                                                  ,source))
+                                      :default (lambda ()
+                                                 ,default)
+                                      :encoder (lambda (it)
+                                                 (declare (ignorable it))
+                                                 ,encoder)))
+            (*pookies* (adjoin ,^pookie^ *pookies*))
+            (,var (pookie-value ,^pookie^)))
+       (declare (special ,var))
+       ,@body)))
+
+(defmacro with-pookies (list-of-pookies &body body)
+  (let ((body `(progn ,@body)))
+    (labels ((wrap-into-scope (list-of-pookies)
+               (aif (first list-of-pookies)
+                    `(with-pookie ,it
+                       ,(aif (rest list-of-pookies)
+                             (wrap-into-scope it)
+                             body))
+                    body)))
+      (wrap-into-scope list-of-pookies))))
+
+(defun pookie-current-value (pookie)
+  (symbol-value (pookie-var pookie)))
+
+(defun pookie-default-value (pookie)
+  (funcall (pookie-default pookie)))
+
+(defun pookie-encoded-value (pookie)
+  (funcall (pookie-encoder pookie)
+           (pookie-current-value pookie)))
+
+(defun pookie-still-same? (pookie)
+  (equal (pookie-current-value pookie)
+         (pookie-default-value pookie)))
+
+(defun pookies ()
+  (iter (for pookie in *pookies*)
+        (unless (pookie-still-same? pookie)
+            (collect (pookie-key pookie))
+            (collect (pookie-encoded-value pookie)))))
+
+;; get parameters
+
+(defun encode-get-parameters (parameters)
+  (when parameters
+    (apply #'join-by "&"
+           (iter (for (key value) in (group parameters 2))
+                 (collect (format nil "~(~a~)=~a" key value))))))
+
+(defun decode-get-parameters (string)
+  (unique-plist (iter (for pair in (ppcre:split "\\&" string))
+                      (destructuring-bind (name &optional (value ""))
+                          (ppcre:split "\\=" pair)
+                        (collect (name-keyword name))
+                        (collect value)))))
+
+(defun insert-get-parameters (link parameters)
+  (destructuring-bind (script &optional fragment)
+      (bj:split-once "#" link)
+    (let ((uri (if parameters
+                   (destructuring-bind (script-name &optional script-args)
+                       (bj:split-once "\\?" script)
+                     (let* ((script-params (decode-get-parameters script-args))
+                            (all-params (unique-plist (append parameters script-params)))
+                            (string-params (encode-get-parameters all-params)))
+                       (join script-name (aif string-params (join "?" it) ""))))
+                   script)))
+      (if fragment
+          (join uri "#" fragment)
+          uri))))
+
+;; scope
+
+(defvar *scope* nil "Текущее окружение")
+
+(defmacro with-scope (scope &body body)
+  `(let* ((*scope* (append ',scope *scope*))
+          ,@scope)
+     (declare (ignorable ,@(mapcar #'first scope)))
+     ,@body))
 
 ;;; link
 
 (defgeneric link (route-key &rest args)
-  (:documentation "Make a link."))
+  (:documentation "Собрать ссылку"))
 
 (defparameter broken-link "/404-broken-link/")
 
+(defparameter broken-link? nil)
+
+(defun broken-link ()
+  (if broken-link? broken-link
+      (let ((broken-link? t))
+        (aif (find-default-route)
+             (link it)
+             (broken-link)))))
+
+(defun route-args-scope (route)
+  (awhen (route-args route)
+    (iter (for key in it)
+          (for pair = (find key *scope* :key #'first))
+          (awhen pair
+            (collect (symbol-keyword key))
+            (collect (second it))))))
+
 (defmethod link (route-key &rest parameters)
-  (aif (route route-key)
-       (careful-apply (route-link it) parameters)
-       broken-link))
+  (aif (with-router-routes (route route-key))
+       (let ((basic (apply (route-link it) parameters)))
+         (aif (pookies)
+              (insert-get-parameters basic it)
+              basic))
+       (broken-link)))
 
 ;; setup
 
-(defun insert-get-parameters (link parameters)
-  (awhen (bj:split-once "#" link)
-    (let ((script (first it))
-          (fragment (second it)))
-      (let ((uri (if (< 0 (hash-table-count parameters))
-                     (let ((get-parameters (format nil "~{~{~a~^=~}~^&~}"
-                                                   (maphash-collect (k v) parameters
-                                                     (list k v)))))
-                       (join script "?" get-parameters))
-                     script)))
-        (if fragment
-            (join uri "#" fragment)
-            uri)))))
-
-(defmacro set-route (name &key (follow t) args track link clause params action)
+(defmacro set-route (name &key (follow t) args link clause-with-scope scope clause pookies action)
   `(progn (setf (routes *router*)
                 (delete ,name (routes *router*) :key #'route-name :test #'equal))
           (push (make-instance 'route
                                :name ,name
                                :follow ,follow
-                               :link (lambda (&key ,@args)
-                                       (declare (ignorable ,@args))
-                                       (let ((track (make-hash-table :test #'equal)))
-                                         (iter (for (arg . params) in ',track)
-                                               (when (listp params)
-                                                 (awhen (getf params :save)
-                                                   (set arg (eval it))))
-                                               (let ((arg-name (string-downcase (symbol-name arg))))
-                                                 (awhen (or (symbol-value arg) (get-parameter arg-name))
-                                                   (setf (gethash arg-name track) it))))
-                                         (insert-get-parameters ,link track)))
+                               :args ',args
+                               :link ,(aif link
+                                           (if args
+                                               `(lambda (&key ,@args &allow-other-keys)
+                                                  (declare (ignorable ,@args))
+                                                  ,it)
+                                               `(lambda (&key)
+                                                  ,it))
+                                          `(lambda (&key)
+                                             (broken-link)))
                                :clause (lambda ()
-                                         ,(aif clause it `(string= (script-name*) ,link)))
-                               :decoder (lambda ()
-                                          ,(awhen params it))
-                               :action (lambda (&key ,@args)
-                                         (declare (ignorable ,@args))
-                                         ,action))
+                                         ,(if (and (null clause) (null link))
+                                              nil
+                                              (let ((clause (or clause
+                                                                `(string= (script-name*)
+                                                                          ,link))))
+                                                (if clause-with-scope
+                                                    `(with-route-scope ,scope ,clause)
+                                                    clause))))
+                               :action (lambda ()
+                                         (with-scope ,scope
+                                           (with-pookies ,pookies
+                                             ,(or action '(call-next-route))))))
                 (routes *router*))))
 
 (defun unset-route (name)

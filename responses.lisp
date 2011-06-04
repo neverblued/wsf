@@ -63,6 +63,7 @@
    (meta-content :initarg :meta :accessor meta-content :initform nil)
    (style :initarg :style :accessor style :initform nil)
    (script :initarg :script :accessor script :initform nil)
+   (links :initarg :links :accessor links :initform nil)
    (appendix :initarg :appendix :accessor appendix :initform nil)))
 
 (defgeneric format-html-meta (html-response))
@@ -70,19 +71,23 @@
 (defgeneric format-html-script (html-response))
 
 (defmethod content :around ((response html-response))
-  (format nil "<!DOCTYPE html><html><head><title>~a</title>~{~a~}</head><body>~a</body></html>"
-          (title response)
-          (list (html-link "/favicon.ico" :rel "shortcut icon" :type "image/x-icon")
-                (format-html-meta response)
-                (format-html-style response)
-                (format-html-script response)
-                (or (appendix response) ""))
-          (call-next-method)))
+    (format nil "<!DOCTYPE html><html><head><title>~a</title>~{~a~}</head><body>~a</body></html>"
+            (title response)
+            (append (iter (for x in (adjoin '("/favicon.ico"
+                                              :rel "shortcut icon"
+                                              :type "image/x-icon")
+                                            (links response)))
+                          (collect (apply #'html-link x)))
+                    (list (format-html-meta response)
+                          (format-html-style response)
+                          (format-html-script response)
+                          (or (appendix response) "")))
+            (call-next-method)))
 
 ;; link
 
 (defun html-link (href &key rel type)
-  (format nil "<link rel='~a' type='~a' href='~a' />" rel type href))
+  (format nil "<link rel='~a'~a href='~a' />" rel (if type (format nil " type='~a'" type) "") href))
 
 (defun html-include-style (path-base)
   (html-link (join "/css/" path-base ".css") :rel "stylesheet" :type "text/css"))

@@ -7,18 +7,23 @@
 (defvar *site*)
 
 (defmethod respond :around (site request)
-  (let ((*site* site)
-        (*request* request))
-    (let ((response (catch 'response
-                      (with-site-db site
-                        (with-router site
-                          (kgb::with-authentication request
-                            (call-next-method)))))))
-      (send (typecase response
-              (response response)
-              (string (make-instance 'text-response
-                                     :content (join "Ответ сервера: " response)))
-              (t (default-response site request)))))))
+  (with-router site
+    (let* ((*site* site)
+           (*request* request)
+           (response (catch 'response
+                       (with-site-db site
+                         (kgb::with-authentication request
+                           (call-next-method))))))
+      (labels ((assure-response (response)
+                 (typecase response
+                   (response response)
+                   (string (make-instance 'text-response
+                                          :content (join "Ответ сервера: " response)))
+                   (t (default-response site request)))))
+        (send (assure-response response))))))
+
+(defmethod respond (site request)
+  (call-next-route))
 
 (defun throw-response (response)
   (throw 'response response))
@@ -26,7 +31,7 @@
 (defparameter *catch-errors* t)
 
 (defmethod respond (site (request request))
-  (handler-case (route!)
+  (handler-case (call-next-method)
     ((or warning error wsf-condition) (condition)
       (if (and *catch-errors* (not (boundp '*reply*)))
           (invoke-debugger condition)
@@ -36,7 +41,7 @@
   (let* ((*acceptor* (site-acceptor site))
          (*reply* (make-instance 'reply))
          (*request* (make-instance 'request :uri uri :acceptor *acceptor*)))
-    (route!)))
+    (call-next-method)))
 
 (defun dongle-message (title message)
   (format nil "<center><h1>~a</h1><big><p>~a</p><p>:( <big>&rarr;</big> <a href='/'>:)</a></p></big><center>" title message))

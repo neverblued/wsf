@@ -1,51 +1,44 @@
 (in-package #:wsf)
 
-(defun ajax-action (site action-name)
-  (values (gethash action-name (ajax-actions site) nil)))
-
-(defun (setf ajax-action) (new-action site action-name)
-  (setf (gethash action-name (ajax-actions site))
-        new-action))
-
-(defun pprint-ajax (site &optional (stream t))
-  (maphash (lambda (action-name func)
-             (format stream "~&~a => ~a~%" action-name func))
-           (ajax-actions site)))
-
 (defun ajax-win (&optional data)
   (append (list :status "win")
           (awhen data (list :data it))))
 
 (defun ajax-fail (condition)
-  (list :status "fail" :data (format nil "~a" condition)))
+  (list :status "fail"
+        :data (format nil "~a" condition)))
 
 (defvar *warning-log* nil)
 
-(defun ajax-response (site action-name action-args)
-  (jsun::encode (catch 'ajax-response
-                  (handler-case (aif (ajax-action site action-name)
-                                     (ajax-win (apply it action-args))
-                                     (error 'undefined-ajax-action :action-name action-name))
-                    (warning (condition)
-                      (push (cons (get-universal-time) condition) *warning-log*)
-                      (muffle-warning condition))
-                    (error (condition)
-                      (throw 'ajax-response (ajax-fail condition)))))))
+(defvar ajax? nil)
 
-(defmacro set-ajax-routing (&optional (uri "/ajax/"))
-  `(set-route :ajax
-              :args (action-name action-args)
-              :link (join ,uri action-name)
-              :clause (begins-with? (script-name*) ,uri)
-              :params (list :action-name (name-keyword (trim-left ,uri (script-name*)))
-                            :action-args (iter (for prm in (post-parameters*))
-                                               (collect (name-keyword (car prm)))
-                                               (collect (cdr prm))))
-              :action (make-instance 'text-response
-                                     :content (ajax-response *site* action-name action-args))))
+(defvar ajax-data)
 
-(defmacro set-ajax (site action-name action-args &body action-body)
-  `(setf (ajax-action ,site ,action-name)
-         (lambda (&key ,@action-args)
-           (declare (ignorable ,@action-args))
-           ,@action-body)))
+(defun ajax-datum (key)
+  (getf ajax-data key))
+
+(let ((ajax-action
+       `(make-instance 'text-response
+                       :content (jsun::encode
+                                 (catch 'ajax-response
+                                   (handler-case (ajax-win (call-next-route))
+                                     (warning (condition)
+                                       (push (cons (get-universal-time) condition)
+                                             *warning-log*)
+                                       (muffle-warning condition))
+                                     (error (condition)
+                                       (ajax-fail condition))))))))
+
+  (defmacro set-route-ajax (&key (uri "/ajax/") follow)
+    `(set-route :ajax
+                :follow ,follow
+                :args (action-name)
+                :link (join ,uri action-name)
+                :clause (begins-with? (script-name*) ,uri)
+                :scope ((ajax-action-name (trim-left ,uri (script-name*))))
+                :action (let ((ajax? t)
+                              (ajax-data (list :action-name (name-keyword ajax-action-name)
+                                               :parameters (iter (for prm in (post-parameters*))
+                                                                 (collect (name-keyword (car prm)))
+                                                                 (collect (cdr prm))))))
+                          ,ajax-action))))

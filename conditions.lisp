@@ -27,7 +27,7 @@
    (request :initarg :request :reader condition-request)))
 
 (define-condition route-not-found (wsf-condition)
-  ((controller :initarg :controller :reader condition-controller)
+  ((router :initarg :router :reader condition-router)
    (request :initarg :request :reader condition-request)))
 
 (define-condition invalid-action (wsf-condition type-error)
