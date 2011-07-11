@@ -223,8 +223,11 @@
 
 ;;; link
 
-(defgeneric link (route-key &rest args)
+(defgeneric make-link (router route-key &rest args)
   (:documentation "Собрать ссылку"))
+
+(defun link (route-key &rest parameters)
+  (apply #'make-link *router* route-key parameters))
 
 (defparameter broken-link "/404-broken-link/")
 
@@ -245,13 +248,28 @@
             (collect (symbol-keyword key))
             (collect (second it))))))
 
-(defmethod link (route-key &rest parameters)
-  (aif (with-router-routes (route route-key))
-       (let ((basic (apply (route-link it) parameters)))
-         (aif (pookies)
-              (insert-get-parameters basic it)
-              basic))
-       (broken-link)))
+(defun route! (route)
+  (typecase route
+    (route route)
+    (t (route route))))
+
+(defmethod make-link (router route &rest parameters)
+  (with-router router
+    (aif (with-router-routes (route! route))
+         (let ((link (apply (route-link it) parameters)))
+           (aif (pookies)
+                (insert-get-parameters link it)
+                link))
+         (broken-link))))
+
+(defmacro set-special-link (route-key &body body)
+  `(defmethod make-link :around ((router (eql *router*))
+                                 (route (eql ,route-key))
+                                 &rest parameters)
+     (macrolet ((another-link (route-key)
+                  `(apply #'make-link router ,route-key parameters)))
+       (symbol-macrolet ((original-link (call-next-method)))
+         ,@body))))
 
 ;; setup
 
@@ -275,10 +293,12 @@
                                          ,(if (and (null clause) (null link))
                                               nil
                                               (let ((clause (or clause
-                                                                `(string= (script-name*)
-                                                                          ,link))))
+                                                                (awith link
+                                                                  (when (stringp it)
+                                                                    `(string= ,it
+                                                                              (script-name*)))))))
                                                 (if clause-with-scope
-                                                    `(with-route-scope ,scope ,clause)
+                                                    `(with-scope ,scope ,clause)
                                                     clause))))
                                :action (lambda ()
                                          (with-scope ,scope

@@ -14,6 +14,14 @@
       ;*show-lisp-backtraces-p* t ; @bug: Undefined variable.
       )
 
+;; misc
+
+(defun yandex-bot? ()
+  (true? (and (within-request-p)
+              (ppcre:scan (ppcre:create-scanner "yandex"
+                                                :case-insensitive-mode t)
+                          (user-agent)))))
+
 ;; acceptors
 
 (defvar acceptors nil)
