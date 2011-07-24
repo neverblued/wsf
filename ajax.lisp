@@ -12,12 +12,26 @@
 
 (defvar ajax? nil)
 
-(defvar ajax-data)
+(defvar ajax-action nil)
 
-(defun ajax-datum (key)
-  (getf ajax-data key))
+(defvar ajax-parameters nil)
 
-(let ((ajax-action
+(defun ajax-parameter (key)
+  (getf ajax-parameters key))
+
+(defun ajax-string (key)
+  (getf ajax-parameters key ""))
+
+(defun ajax-keyword (key)
+  (when (ajax-parameter key)
+    (awith (ajax-string key)
+      (unless (string= it "NIL")
+        (name-keyword it)))))
+
+(defun ajax-value (key)
+  (safely-read-from-string (ajax-string key)))
+
+(let ((response
        `(make-instance 'text-response
                        :content (jsun::encode
                                  (catch 'ajax-response
@@ -30,15 +44,16 @@
                                        (ajax-fail condition))))))))
 
   (defmacro set-route-ajax (&key (uri "/ajax/") follow)
-    `(set-route :ajax
-                :follow ,follow
-                :args (action-name)
-                :link (join ,uri action-name)
-                :clause (begins-with? (script-name*) ,uri)
-                :scope ((ajax-action-name (trim-left ,uri (script-name*))))
-                :action (let ((ajax? t)
-                              (ajax-data (list :action-name (name-keyword ajax-action-name)
-                                               :parameters (iter (for prm in (post-parameters*))
-                                                                 (collect (name-keyword (car prm)))
-                                                                 (collect (cdr prm))))))
-                          ,ajax-action))))
+    (once-only (uri)
+      `(set-route :ajax
+                  :follow ,follow
+                  :args (action-name)
+                  :link (join ,uri action-name)
+                  :clause (begins-with? (script-name*) ,uri)
+                  :scope ((action-name (trim-left ,uri (script-name*))))
+                  :action (let ((ajax? t)
+                                (ajax-action (name-keyword action-name))
+                                (ajax-parameters (iter (for prm in (post-parameters*))
+                                                       (collect (name-keyword (car prm)))
+                                                       (collect (cdr prm)))))
+                            ,response)))))

@@ -14,13 +14,11 @@
                        (with-site-db site
                          (kgb::with-authentication request
                            (call-next-method))))))
-      (labels ((assure-response (response)
-                 (typecase response
-                   (response response)
-                   (string (make-instance 'text-response
-                                          :content (join "Ответ сервера: " response)))
-                   (t (default-response site request)))))
-        (send (assure-response response))))))
+      (send (typecase response
+              (response response)
+              (string (make-instance 'text-response
+                                     :content (join "Ответ сервера: " response)))
+              (t (default-response site request)))))))
 
 (defmethod respond (site request)
   (call-next-route))
@@ -32,6 +30,8 @@
 
 (defmethod respond (site (request request))
   (handler-case (call-next-method)
+    (route-not-found ()
+      nil)
     ((or warning error wsf-condition) (condition)
       (if (and *catch-errors* (not (boundp '*reply*)))
           (invoke-debugger condition)
