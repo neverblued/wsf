@@ -25,8 +25,7 @@
 (defun ajax-keyword (key)
   (when (ajax-parameter key)
     (awith (ajax-string key)
-      (unless (string= it "NIL")
-        (name-keyword it)))))
+      (name-keyword it))))
 
 (defun ajax-value (key)
   (safely-read-from-string (ajax-string key)))

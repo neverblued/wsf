@@ -11,7 +11,7 @@
            #:route #:*route* #:*routes* #:route-name #:route-follow #:call-next-route ; route
            #:pookies #:pookie-origin ; pookies
            #:set-route-ajax #:ajax? #:ajax-win #:ajax-fail ; ajax
-           #:ajax-action #:ajax-string #:ajax-keyword #:ajax-value
+           #:ajax-action #:ajax-parameters #:ajax-parameter #:ajax-string #:ajax-keyword #:ajax-value
            #:set-auth-cookie #:kill-auth-cookie #:auth-cookie-life ; kgb
            #:goals #:achieve #:goal #:goal-alias #:goal-link #:goal-time #:goal-user #:goal-ip ; goals
            ))
