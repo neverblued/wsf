@@ -1,7 +1,7 @@
 (defpackage #:wsf
   (:use #:cl #:blackjack #:hunchentoot #:kgb #:postmodern #:postgrace #:iterate #:alexandria)
   (:shadow #:acceptor #:content-type)
-  (:export #:site-docroot #:from-docroot ; site
+  (:export #:site-package #:site-docroot #:from-docroot ; site
            #:site-database #:with-db #:with-site-db ; database
            #:site-domain #:site-port #:online? #:stop&start #:acceptors #:yandex-bot? ; http
            #:*site* #:*request* #:respond #:send #:throw-response ; respond

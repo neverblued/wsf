@@ -6,8 +6,8 @@
 (defsystem "wsf"
   :description "Web Site Framework"
   :version "0.2"
-  :author "Demetrius Conde <condemetrius@gmail.com>"
-  :depends-on (#:blackjack #:jsun #:alexandria #:iterate #:hunchentoot #:kgb #:postgrace)
+  :author "Дмитрий Пинский <demetrius@neverblued.info>"
+  :depends-on (#:blackjack #:jsun #:kgb #:postgrace #:hunchentoot #:alexandria #:iterate)
   :serial t
   :components ((:file "package")
                (:file "utils")
@@ -21,4 +21,6 @@
                (:file "ajax")
                (:file "site")
                (:file "debug")
-               (:file "goals")))
+               (:file "parser")
+               ;(:file "goals")
+               ))
