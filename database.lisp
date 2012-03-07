@@ -7,5 +7,5 @@
         (progn ,@body)))
 
 (defmacro with-site-db (site &body body)
-  `(with-db (site-database ,site)
+  `(with-database (site-database ,site)
      ,@body))

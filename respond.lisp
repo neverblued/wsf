@@ -11,9 +11,9 @@
     (let* ((*site* site)
            (*request* request)
            (response (catch 'response
-                       (with-site-db site
+                       ;(with-site-db site
                          (kgb::with-authentication request
-                           (call-next-method))))))
+                           (call-next-method)))));)
       (send (typecase response
               (response response)
               (string (make-instance 'text-response
