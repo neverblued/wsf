@@ -1,0 +1,21 @@
+;; (c) Дмитрий Пинский <demetrius@neverblued.info>
+;; Допускаю использование и распространение согласно
+;; LLGPL -> http://opensource.franz.com/preamble.html
+
+(in-package #:wsf)
+
+(defvar *scope* nil "Текущее окружение")
+
+(defmacro with-scope (scope &body body)
+  `(let* ((*scope* (append ',scope *scope*))
+          ,@scope)
+     (declare (ignorable ,@(mapcar #'first scope)))
+     ,@body))
+
+(defun route-args-scope (route)
+  (awhen (route-args route)
+    (iter (for key in it)
+          (for pair = (find key *scope* :key #'first))
+          (awhen pair
+            (collect (symbol-keyword key))
+            (collect (second it))))))
