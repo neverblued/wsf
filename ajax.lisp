@@ -1,3 +1,7 @@
+;; (c) Дмитрий Пинский <demetrius@neverblued.info>
+;; Допускаю использование и распространение согласно
+;; LLGPL -> http://opensource.franz.com/preamble.html
+
 (in-package #:wsf)
 
 (defun ajax-win (&optional data)
@@ -7,8 +11,6 @@
 (defun ajax-fail (condition)
   (list :status "fail"
         :data (format nil "~a" condition)))
-
-(defvar *warning-log* nil)
 
 (defvar ajax? nil)
 
@@ -36,8 +38,6 @@
                                  (catch 'ajax-response
                                    (handler-case (ajax-win (call-next-route))
                                      (warning (condition)
-                                       (push (cons (get-universal-time) condition)
-                                             *warning-log*)
                                        (muffle-warning condition))
                                      (error (condition)
                                        (ajax-fail condition))))))))

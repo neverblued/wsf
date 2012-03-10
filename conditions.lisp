@@ -1,23 +1,27 @@
+;; (c) Дмитрий Пинский <demetrius@neverblued.info>
+;; Допускаю использование и распространение согласно
+;; LLGPL -> http://opensource.franz.com/preamble.html
+
 (in-package #:wsf)
 
 ;; common
 
 (define-condition wsf-condition () ())
 
-;; site
+;; server
 
-(define-condition site-condition (wsf-condition)
-  ((site :initarg :site :reader condition-site)))
+(define-condition server-condition (wsf-condition)
+  ((server :initarg :server :reader condition-server)))
 
-(define-condition site-on (site-condition simple-warning) ())
+(define-condition server-on (server-condition simple-warning) ())
 
-(defmethod print-object ((condition site-on) stream)
-  (format stream "~&Сайт ~a в эфире.~%" (condition-site condition)))
+(defmethod print-object ((condition server-on) stream)
+  (format stream "~&Сайт ~a в эфире.~%" (condition-server condition)))
 
-(define-condition site-off (site-condition simple-warning) ())
+(define-condition server-off (server-condition simple-warning) ())
 
-(defmethod print-object ((condition site-off) stream)
-  (format stream "~&Сайт ~a больше не доступен.~%" (condition-site condition)))
+(defmethod print-object ((condition server-off) stream)
+  (format stream "~&Сайт ~a больше не доступен.~%" (condition-server condition)))
 
 ;; route
 
@@ -26,14 +30,9 @@
    (route :initarg :route :reader condition-route)
    (request :initarg :request :reader condition-request)))
 
-(define-condition route-not-found (wsf-condition)
-  ((router :initarg :router :reader condition-router)
-   (request :initarg :request :reader condition-request)))
+(define-condition route-not-found (wsf-condition error)
+  ((router :initarg :router :reader condition-router :initform *router*)
+   (request :initarg :request :reader condition-request :initform *request*)))
 
 (define-condition invalid-action (wsf-condition type-error)
   ((route :initarg :route :reader condition-route)))
-
-(define-condition undefined-ajax-action (error wsf-condition)
-  ((action-name :initarg :action-name :reader condition-action-name))
-  (:report (lambda (condition stream)
-             (format stream "Неизвестное действие ~a." (condition-action-name condition)))))
