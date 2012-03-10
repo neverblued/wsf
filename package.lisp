@@ -38,12 +38,6 @@
    #:set-route-ajax #:ajax? #:ajax-win #:ajax-fail
    #:ajax-action #:ajax-parameters #:ajax-parameter #:ajax-string #:ajax-keyword #:ajax-value
 
-   ;; extended server
-                                        ; database
-   #:database-server #:server-database
-                                        ; kgb
-   #:secure-server #:set-auth-cookie #:kill-auth-cookie #:auth-cookie-life
-
    ;; alpha shit
                                         ; goals
    ;#:goals #:achieve #:goal #:goal-alias #:goal-link #:goal-time #:goal-user #:goal-ip
