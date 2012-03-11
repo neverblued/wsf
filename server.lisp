@@ -13,6 +13,11 @@
 
 (defvar *server*)
 
+(defmacro with-server (server &body body)
+  `(let ((*server* ,server))
+;     (declare (server *server*))
+     ,@body))
+
 (defmethod respond :around (server request)
   (let* ((*server* server)
          (*request* request))

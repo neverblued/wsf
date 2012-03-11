@@ -8,7 +8,7 @@
   (:documentation "Собрать ссылку"))
 
 (defun link (route-key &rest parameters)
-  (apply #'make-link *router* route-key parameters))
+  (apply #'make-link *server* route-key parameters))
 
 (defparameter broken-link "/404-broken-link/")
 
@@ -22,8 +22,8 @@
              (broken-link)))))
 
 (defmethod make-link (router route &rest parameters)
-  (with-router router
-    (aif (with-router-routes (route! route))
+  (with-server router
+    (aif (with-server-routes (route! route))
          (let ((link (apply (route-link it) parameters)))
            (aif (pookies)
                 (insert-get-parameters link it)

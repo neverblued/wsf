@@ -7,26 +7,17 @@
 (defclass router ()
   ((routes :accessor routes :initform nil)))
 
-(defvar *router* nil "Текущий маршрутизатор")
-
-(defmacro with-router (router &body body)
-  "Создать окружение маршрутизатора"
-  `(let ((*router* ,router))
-     (declare (router *router*))
-     ,@body))
-
 (defmethod respond ((router router) request)
-  (with-router router
-    (handler-case (call-next-route)
-      (route-not-found ()
-        nil))))
+  (handler-case (call-next-route)
+    (route-not-found ()
+      nil)))
 
-(defmacro with-router-routes (&body body)
-  `(let ((*routes* (routes *router*)))
+(defmacro with-server-routes (&body body)
+  `(let ((*routes* (routes *server*)))
      ,@body))
 
 (defun spare-routes ()
   "Список доступных маршрутов из текущего положения"
-  (iter (for route in (routes *router*))
+  (iter (for route in (routes *server*))
         (unless (route? route)
           (collect route))))

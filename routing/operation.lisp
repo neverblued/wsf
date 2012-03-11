@@ -28,7 +28,7 @@
           (leave route))))
 
 (defun find-default-route ()
-  (with-router-routes (or (route :default)
+  (with-server-routes (or (route :default)
                           (signal 'route-not-found))))
 
 (defun call-next-route ()

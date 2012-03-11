@@ -7,10 +7,10 @@ Let there be site:
 
 Optional HTTP port's default value is 8666.
 
+    (with-server site
+
 Routing
 -------
-
-    (with-router site
 
 Simple route:
 
@@ -35,42 +35,45 @@ For public scripts and theme folders:
       (set-route :static
                  :clause-with-scope t
                  :scope ((uri (script-name*)))
-                 :clause (notevery #'null (mapcar (lambda (path)
-                                                    (begins-with? uri path))
-                                                  '("/js/" "/css/" "/image/")))
-                 :action (handle-static-file (from-docroot site (trim-left "/" uri))))
+                 :clause (iter (for path in '("/js/" "/css/" "/image/"))
+                               (when (begins-with? uri path)
+                                 (leave t)))
+                 :action (handle-static-file (docroot/ uri)))
 
 For public folder with URI masquerade:
 
       (set-route :public
                  :clause-with-scope t
                  :scope ((uri (script-name*)))
-                 :clause (ppcre:scan "^/robots\\.txt$|^/kinda-root-folder/" uri)
-                 :action (handle-static-file (from-docroot site "public" uri)))
+                 :clause (scan (join-by "|"
+                                        "^/robots\\.txt$"
+                                        "^/kinda-root-folder/")
+                               uri)
+                 :action (handle-static-file (docroot/ "public" uri)))
 
-Default AJAX bootstrap:
+Bootstrap default AJAX route:
 
       (set-route-ajax)
 
-"/ajax/test" => { status: "win", data: { key: "value" }}
+Handle "/ajax/test" => { status: "win", data: { key: "value" }}
 
       (set-route :asynchronous-test
                  :follow :ajax
                  :clause (eql ajax-action :test)
                  :action (list :key "value"))
 
-"/ajax/error" => { status: "fail", data: "FFFUUU" }
+Handle "/ajax/error" => { status: "fail", data: "FU5" }
 
       (set-route :error-test
                  :follow :ajax
                  :clause (eql ajax-action :error)
-                 :action (error "FFFUUU")))
+                 :action (error (join "FU" (+ 2 3))))
 
 Response
 --------
 
     (defun respond-example (example)
-      (let* ((title   (join "Example " (keyword-name (id example))))
+      (let* ((title (join "Example " (keyword-name (id example))))
              (content (page-content example)))
         (make-instance 'html-response
                        :appendix (path-content "view/google-analytics.html")
@@ -87,3 +90,4 @@ Response
 -----
 
 * Write about parsers, pookies, etc.
+* Add a test site system.

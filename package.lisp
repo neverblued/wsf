@@ -12,11 +12,12 @@
 
    ;; basic server
                                         ; interface
-   #:respond #:default-response #:failure-response #:*server* #:*request*
+   #:respond #:default-response #:failure-response
+   #:*server* #:*request* #:with-server
                                         ; lisp
    #:lisp-server #:server-system #:server-package
                                         ; docroot
-   #:docroot-server #:server-pathname #:from-docroot
+   #:docroot-server #:server-pathname #:from-docroot #:docroot/
                                         ; parse
    #:parse-server #:server-parsers #:ranked-parsers #:parse
    #:regex-parser
