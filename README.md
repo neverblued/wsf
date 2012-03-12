@@ -3,7 +3,7 @@ Web Site Framework
 
 Создать сайт:
 
-```
+```cl
 (defvar site (make-instance 'website :system '#:your-system))
 ```
 
@@ -13,13 +13,13 @@ Web Site Framework
 Маршрутизация
 -------------
 
-```
+```cl
 (with-server site
 ```
 
 Простой маршрут:
 
-```
+```cl
   (set-route :examples
              :link "/examples"
              :action (respond-examples))
@@ -27,7 +27,7 @@ Web Site Framework
 
 Маршрут с параметрами:
 
-```
+```cl
   (let ((prefix "/example/"))
     (set-route :example
                :args (example)
@@ -41,7 +41,7 @@ Web Site Framework
 
 Маршрут для клиентских скриптов и темы оформления:
 
-```
+```cl
   (set-route :static
              :clause-with-scope t
              :scope ((uri (script-name*)))
@@ -53,7 +53,7 @@ Web Site Framework
 
 Публичная папка с маскировкой пути:
 
-```
+```cl
   (set-route :public
              :clause-with-scope t
              :scope ((uri (script-name*)))
@@ -66,13 +66,13 @@ Web Site Framework
 
 Подключить стандартный маршрут для AJAX:
 
-```
+```cl
   (set-route-ajax)
 ```
 
 "/ajax/test" => { status: "win", data: { key: "value" }}
 
-```
+```cl
   (set-route :asynchronous-test
              :follow :ajax
              :clause (eql ajax-action :test)
@@ -81,7 +81,7 @@ Web Site Framework
 
 "/ajax/error" => { status: "fail", data: "FU5" }
 
-```
+```cl
   (set-route :error-test
              :follow :ajax
              :clause (eql ajax-action :error)
@@ -91,7 +91,7 @@ Web Site Framework
 Ответы
 ------
 
-```
+```cl
 (defun respond-example (example)
   (let* ((title (join "Example " (keyword-name (id example))))
          (content (page-content example)))
