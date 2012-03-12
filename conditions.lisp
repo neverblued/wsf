@@ -31,7 +31,7 @@
    (request :initarg :request :reader condition-request)))
 
 (define-condition route-not-found (wsf-condition error)
-  ((router :initarg :router :reader condition-router :initform *router*)
+  ((router :initarg :router :reader condition-router :initform *server*)
    (request :initarg :request :reader condition-request :initform *request*)))
 
 (define-condition invalid-action (wsf-condition type-error)

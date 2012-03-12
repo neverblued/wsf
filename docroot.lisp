@@ -15,6 +15,9 @@
 (defun docroot/ (&rest relative-path-chunks)
   (apply #'from-docroot *server* relative-path-chunks))
 
+(defun text-docroot/ (&rest relative-path-chunks)
+  (pathname-content (apply #'docroot/ relative-path-chunks)))
+
 (defclass docroot-server (lisp-server) ())
 
 (defmethod server-pathname ((server docroot-server))
