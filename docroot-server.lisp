@@ -18,7 +18,10 @@
 (defun text-docroot/ (&rest relative-path-chunks)
   (pathname-content (apply #'docroot/ relative-path-chunks)))
 
-(defclass docroot-server (lisp-server) ())
+(defclass docroot-server (lisp-server)
+  ((data-pathname-format :initarg :data-pathname-format
+                         :accessor server-data-pathname-format
+                         :initform "data/~a.lisp")))
 
 (defmethod server-pathname ((server docroot-server))
   (system-directory (server-system server)))

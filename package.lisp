@@ -19,6 +19,7 @@
                                         ; docroot
    #:docroot-server #:server-pathname #:from-docroot
    #:docroot/ #:text-docroot/
+   #:define-file-datum #:load-file-datum
                                         ; parse
    #:parse-server #:server-parsers #:ranked-parsers #:parse
    #:regex-parser
