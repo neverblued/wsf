@@ -7,10 +7,11 @@
 
 (in-package #:wsf-system)
 
-(defsystem "wsf"
+(defsystem #:wsf
   :description "Web Site Framework"
   :version "0.3"
   :author "Дмитрий Пинский <demetrius@neverblued.info>"
+  :licence "LLGPL"
   :depends-on (#:hunchentoot #:alexandria #:iterate
                #:blackjack #:jsun)
   :serial t
