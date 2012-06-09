@@ -18,7 +18,10 @@
 ;     (declare (server *server*))
      ,@body))
 
+(defparameter server-charset :utf-8)
+
 (defmethod respond :around (server request)
   (let* ((*server* server)
-         (*request* request))
+         (*request* request)
+         (*hunchentoot-default-external-format* (charset-instance server-charset)))
     (call-next-method)))

@@ -22,7 +22,12 @@
   (getf ajax-parameters key))
 
 (defun ajax-string (key)
-  (getf ajax-parameters key ""))
+  (aif (getf ajax-parameters key)
+       it
+       ;(format nil "~a" it)
+       ;(flexi-streams:octets-to-string it :external-format :utf-8)
+       ;(babel:octets-to-string it :encoding :utf-8)
+       ""))
 
 (defun ajax-keyword (key)
   (when (ajax-parameter key)

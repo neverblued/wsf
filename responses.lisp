@@ -26,10 +26,11 @@
 (defgeneric charset (response))
 (defgeneric status (response))
 
+(defun format-content-type (response &optional stream)
+  (format stream "~a; charset=~a" (content-type response) (charset-string (charset response))))
+
 (defun set-reply (response)
-  (flet ((format-content-type (response &optional stream)
-           (format stream "~a; charset=~a" (content-type response) (charset-string (charset response))))
-         (hunchentoot-version ()
+  (flet ((hunchentoot-version ()
            (slot-value (asdf:find-system "hunchentoot") 'asdf::version)))
     (setf (return-code*) (status response)
           (reply-external-format*) (charset-instance (charset response))
@@ -82,7 +83,8 @@
                                               :type "image/x-icon")
                                             (links response)))
                           (collect (apply #'html-link x)))
-                    (list (format-html-meta response)
+                    (list (html-meta-content-type response)
+                          (format-html-meta response)
                           (format-html-style response)
                           (format-html-script response)
                           (or (appendix response) "")))
@@ -93,8 +95,10 @@
 (defun html-link (href &key rel type)
   (format nil "<link rel='~a'~a href='~a' />" rel (if type (format nil " type='~a'" type) "") href))
 
+(defparameter uri-base-css "/css/")
+
 (defun html-include-style (path-base)
-  (html-link (join "/css/" path-base ".css") :rel "stylesheet" :type "text/css"))
+  (html-link (join uri-base-css path-base ".css") :rel "stylesheet" :type "text/css"))
 
 (defmethod format-html-style ((response html-response))
   (let ((style-names (style response)))
@@ -107,8 +111,10 @@
 (defun html-script (href &key type)
   (format nil "<script type='~a' src='~a'></script>" type href))
 
+(defparameter uri-base-js "/js/")
+
 (defun html-include-javascript (path &optional (type "text/javascript"))
-  (html-script (if (ppcre:scan "^http://" path) path (join "/js/" path ".js")) :type type))
+  (html-script (if (ppcre:scan "^http://" path) path (join uri-base-js path ".js")) :type type))
 
 (defmethod format-html-script ((response html-response))
   (aif (script response)
@@ -120,9 +126,10 @@
 (defun html-meta (name content)
   (format nil "<meta name=~a content=~a />" (jsun::encode name) (jsun::encode content)))
 
+(defun html-meta-content-type (response)
+  (format nil "<meta http-equiv=\"content-type\" content=~a />" (jsun::encode (format-content-type response))))
+
 (defmethod format-html-meta ((response html-response))
-  (aif (meta-content response)
-       (apply #'join (mapcar (lambda (meta)
-                               (apply #'html-meta meta))
-                             it))
-       ""))
+  (apply #'join
+         (iter (for x in (meta-content response))
+               (collect (apply #'html-meta x)))))
