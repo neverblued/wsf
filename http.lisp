@@ -10,9 +10,9 @@
       *access-log-pathname*   (pathname "/home/lisp/log/access.log")
       *log-lisp-errors-p*     t
       *log-lisp-backtraces-p* t
-      *approved-return-codes* (union *approved-return-codes*
-                                     (list +http-not-found+
-                                           +http-internal-server-error+))
+      ;*approved-return-codes* (union *approved-return-codes*
+      ;                               (list +http-not-found+
+      ;                                     +http-internal-server-error+))
       *handle-http-errors-p*  t
       *show-lisp-errors-p*    t
       ;*show-lisp-backtraces-p* t ; @bug: Undefined variable.
