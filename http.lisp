@@ -6,14 +6,14 @@
 
 ;; hunchentoot parameters
 
-(setf *message-log-pathname*  (pathname "/home/lisp/log/message.log")
-      *access-log-pathname*   (pathname "/home/lisp/log/access.log")
+(setf ;*message-log-pathname*  (pathname "/home/lisp/log/message.log")
+      ;*access-log-pathname*   (pathname "/home/lisp/log/access.log")
       *log-lisp-errors-p*     t
       *log-lisp-backtraces-p* t
       ;*approved-return-codes* (union *approved-return-codes*
       ;                               (list +http-not-found+
       ;                                     +http-internal-server-error+))
-      *handle-http-errors-p*  t
+      ;*handle-http-errors-p*  t
       *show-lisp-errors-p*    t
       ;*show-lisp-backtraces-p* t ; @bug: Undefined variable.
       )
@@ -82,11 +82,13 @@
   (setf (slot-value acceptor 'accepting?) t)
   (signal 'server-on :server (acceptor-server acceptor)))
 
-(defmethod stop :around ((acceptor acceptor))
+(defmethod stop :around ((acceptor acceptor) &key soft)
+  (declare (ignore soft))
   (when (accepting? acceptor)
     (call-next-method)))
 
-(defmethod stop :after ((acceptor acceptor))
+(defmethod stop :after ((acceptor acceptor) &key soft)
+  (declare (ignore soft))
   (setf (slot-value acceptor 'accepting?) nil)
   (signal 'server-off :server (acceptor-server acceptor)))
 
@@ -106,7 +108,8 @@
 (defmethod start ((server http-server))
   (start (server-acceptor server)))
 
-(defmethod stop ((server http-server))
+(defmethod stop ((server http-server) &key soft)
+  (declare (ignore soft))
   (stop (server-acceptor server)))
 
 (defun online? (http-server)
