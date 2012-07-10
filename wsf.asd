@@ -9,15 +9,16 @@
 
 (defsystem #:wsf
   :description "Web Site Framework"
-  :version "0.3"
+  :version "0.4"
   :author "Дмитрий Пинский <demetrius@neverblued.info>"
   :licence "LLGPL"
   :depends-on (#:hunchentoot #:alexandria #:iterate
                #:blackjack #:jsun)
   :serial t
   :components ((:file "package")
+               (:file "tools")
                (:file "conditions")
-               (:file "responses")
+               (:file "response")
                (:file "server")
                (:file "lisp")
                (:file "docroot-server")

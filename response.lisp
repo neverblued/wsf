@@ -59,6 +59,12 @@
   ((content-type :initarg :content-type :accessor content-type :initform "text/plain")
    (content :initarg :content :accessor content :initform "Hello, world!")))
 
+(defclass json-response (text-response)
+  ((content-type :initform "application/json")))
+
+(defmethod send :around ((response json-response))
+  (jsun::encode (call-next-method)))
+
 ;;; HTML response
 
 (defclass html-response (text-response)

@@ -26,7 +26,7 @@
 
    ;; web server
                                         ; responses
-   #:text-response #:html-response
+   #:text-response #:json-response #:html-response
                                         ; http
    #:http-server #:server-domain #:server-port #:stop&start #:online? #:throw-response #:yandex-bot?
                                         ; pookies

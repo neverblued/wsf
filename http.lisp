@@ -134,15 +134,24 @@
 (defun throw-response (response)
   (throw 'response response))
 
-(defmethod respond :around ((server http-server) request)
-  (awith (catch 'response (call-next-method))
-         (send (typecase it
-                 (response it)
-                 (string (make-instance 'text-response
-                                        :content (join "Ответ сервера: " it)))
-                 (t (default-response server request))))))
+(defmethod respond :around ((server http-server) (uri string))
+  (let* ((*acceptor* (server-acceptor server))
+         (*reply* (make-instance 'reply))
+         (*request* (make-instance 'request :uri uri :acceptor *acceptor*)))
+    (setf (slot-value *request* 'headers-in) nil
+          (slot-value *request* 'remote-addr) "0.0.0.0")
+          ;(header-in* "test" *request*) "test")
+    (respond server *request*)))
 
 (defparameter slime-debug-conditions t)
+
+(defmethod respond :around ((server http-server) (request request))
+  (awith (catch 'response (call-next-method))
+    (send (typecase it
+            (response it)
+            (string (make-instance 'text-response
+                                   :content (join "Сервер ответил строкою: " it)))
+            (t (default-response server request))))))
 
 (defmethod respond ((server http-server) (request request))
   (handler-case (call-next-method)
@@ -152,12 +161,6 @@
                (not (boundp '*reply*)))
           (invoke-debugger condition)
           (throw-response (failure-response server request condition))))))
-
-(defmethod respond ((server http-server) (uri string))
-  (let* ((*acceptor* (server-acceptor server))
-         (*reply* (make-instance 'reply))
-         (*request* (make-instance 'request :uri uri :acceptor *acceptor*)))
-    (call-next-method)))
 
 (defparameter default-http-content-format
   "<center><h1>~a</h1><big><p>~a</p><p>:( <big>&rarr;</big> <a href='/'>:)</a></p></big><center>")
@@ -187,13 +190,15 @@
 
 (defparameter last-requests nil)
 
-(defmethod respond :before ((server http-server) (request request))
+(defparameter last-requests-length 5)
+
+(defun log-request (request)
   (setf last-request request)
-  (setf last-requests
-        (cons last-request
-              (if (> 5 (length last-requests))
-                  last-requests
-                  (subseq last-requests 0 4)))))
+  (push-trim last-request last-requests
+             :limit last-requests-length))
+
+(defmethod respond :before ((server http-server) (request request))
+  (log-request request))
 
 (defun last-request-uris ()
   (mapcar #'request-uri last-requests))

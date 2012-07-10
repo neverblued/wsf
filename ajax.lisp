@@ -37,7 +37,8 @@
 (defun ajax-value (key)
   (safely-read-from-string (ajax-string key)))
 
-(let ((response
+(let ((prefix "/ajax/")
+      (response
        `(make-instance 'text-response
                        :content (jsun::encode
                                  (catch 'ajax-response
@@ -47,7 +48,7 @@
                                      (error (condition)
                                        (ajax-fail condition))))))))
 
-  (defmacro set-route-ajax (&key (uri "/ajax/") follow)
+  (defmacro set-route-ajax (&key (uri prefix) follow)
     (once-only (uri)
       `(set-route :ajax
                   :follow ,follow

@@ -5,8 +5,14 @@
 (in-package #:wsf)
 
 (defgeneric server-system (server))
+
 (defgeneric server-package (server))
 
 (defclass lisp-server ()
-  ((system :initarg :system :accessor server-system :initform (error "no system"))
-   (package :initform *package* :reader server-package)))
+
+  ((system :initarg :system
+           :accessor server-system
+           :initform (error "Lisp server should recieve a :SYSTEM initarg."))
+
+   (package :initform *package*
+            :reader server-package)))
