@@ -28,7 +28,8 @@
                                         ; responses
    #:text-response #:json-response #:html-response
                                         ; http
-   #:http-server #:server-domain #:server-port #:stop&start #:online? #:throw-response #:yandex-bot?
+   #:http-server #:server-domain #:server-port #:stop&start #:online?
+   #:throw-response #:bot? #:assert-session
                                         ; pookies
    #:pookies #:pookie-origin
                                         ; route
@@ -40,8 +41,4 @@
                                         ; ajax
    #:set-route-ajax #:ajax? #:ajax-win #:ajax-fail
    #:ajax-action #:ajax-parameters #:ajax-parameter #:ajax-string #:ajax-keyword #:ajax-value
-
-   ;; alpha shit
-                                        ; goals
-   ;#:goals #:achieve #:goal #:goal-alias #:goal-link #:goal-time #:goal-user #:goal-ip
    ))

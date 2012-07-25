@@ -18,13 +18,17 @@
       ;*show-lisp-backtraces-p* t ; @bug: Undefined variable.
       )
 
-;; misc
+;; bot
 
-(defun yandex-bot? ()
+(defparameter bot-scanners
+  (list :yandex (ppcre:create-scanner "yandex" :case-insensitive-mode t)
+        :google (ppcre:create-scanner "googlebot" :case-insensitive-mode t)))
+
+(defun bot? ()
   (true? (and (within-request-p)
-              (ppcre:scan (ppcre:create-scanner "yandex"
-                                                :case-insensitive-mode t)
-                          (user-agent)))))
+              (iter (for (name scanner) in (group bot-scanners 2))
+                    (when (ppcre:scan scanner (user-agent))
+                      (leave t))))))
 
 ;; acceptors
 
@@ -137,11 +141,21 @@
 (defmethod respond :around ((server http-server) (uri string))
   (let* ((*acceptor* (server-acceptor server))
          (*reply* (make-instance 'reply))
-         (*request* (make-instance 'request :uri uri :acceptor *acceptor*)))
-    (setf (slot-value *request* 'headers-in) nil
-          (slot-value *request* 'remote-addr) "0.0.0.0")
-          ;(header-in* "test" *request*) "test")
+         (*request* (make-instance 'request
+                                   :acceptor *acceptor*
+                                   :server-protocol :HTTP/1.1
+                                   :method :get
+                                   :remote-addr "0.0.0.0"
+                                   :headers-in nil
+                                   :uri uri))
+         (*session* (make-instance 'session))
+         (hunchentoot::*hunchentoot-stream* *debug-io*))
+    ;(setf (header-out "request-source" *request*) "string")
     (respond server *request*)))
+
+(defun assert-session ()
+  (unless (boundp '*session*)
+    (start-session)))
 
 (defparameter slime-debug-conditions t)
 
