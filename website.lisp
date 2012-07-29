@@ -4,7 +4,7 @@
 
 (in-package #:wsf)
 
-(defclass website (http-server docroot-server parse-server router) ())
+(defclass website (docroot-server parse-server router http-server) ())
 
 (defparameter server-charset :utf-8)
 

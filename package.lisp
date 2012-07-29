@@ -29,7 +29,7 @@
    #:text-response #:json-response #:html-response
                                         ; http
    #:http-server #:server-domain #:server-port #:stop&start #:online?
-   #:throw-response #:bot? #:assert-session
+   #:throw-response #:robot? #:assert-session
                                         ; pookies
    #:pookies #:pookie-origin
                                         ; route

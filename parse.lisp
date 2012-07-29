@@ -2,7 +2,7 @@
 ;; Допускаю использование и распространение согласно
 ;; LLGPL -> http://opensource.franz.com/preamble.html
 
-(in-package :wsf)
+(in-package #:wsf)
 
 (defgeneric server-parsers (parse-server))
 

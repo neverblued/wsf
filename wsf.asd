@@ -17,6 +17,9 @@
   :serial t
   :components ((:file "package")
                (:file "tools")
+               (:file "config")
+               (:file "charset")
+
                (:file "conditions")
                (:file "response")
                (:file "server")
@@ -24,8 +27,15 @@
                (:file "docroot-server")
                (:file "docroot-data")
                (:file "parse")
-               (:file "http")
+
+               (:module "http"
+                        :components ((:file "config")
+                                     (:file "acceptor")
+                                     (:file "server")
+                                     (:file "robot")))
+
                (:file "pookies")
+
                (:module "routing"
                         :components ((:file "route")
                                      (:file "scope")
@@ -34,5 +44,8 @@
                                      (:file "get-parameters")
                                      (:file "link")
                                      (:file "setup")))
+
                (:file "ajax")
-               (:file "website")))
+               (:file "website")
+
+               (:file "debug")))

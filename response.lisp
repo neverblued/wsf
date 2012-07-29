@@ -4,30 +4,25 @@
 
 (in-package #:wsf)
 
-;; charset
-
-(defparameter *charsets* `(
-                           (:utf-8 (,hunchentoot::+utf-8+ "utf-8"))
-                           ))
-
-(flet ((? (charset)
-         (find-assoc charset *charsets* :test #'eql)))
-
-  (defun charset-instance (charset)
-    (first (? charset)))
-
-  (defun charset-string (charset)
-    (second (? charset))))
-
-;;; response
-
 (defgeneric content (response))
+
+(defgeneric send (response))
+
+(defmethod send (response)
+  (awith (content response)
+    (if (string-null it)
+        (default-server-message)
+        it)))
+
 (defgeneric content-type (response))
 (defgeneric charset (response))
-(defgeneric status (response))
 
 (defun format-content-type (response &optional stream)
-  (format stream "~a; charset=~a" (content-type response) (charset-string (charset response))))
+  (format stream "~a; charset=~a"
+          (content-type response)
+          (charset-string (charset response))))
+
+(defgeneric status (response))
 
 (defun set-reply (response)
   (flet ((hunchentoot-version ()
@@ -37,17 +32,11 @@
           (content-type*) (format-content-type response)
           (header-out :server) (format nil "WSF over Hunchentoot ~a" (hunchentoot-version)))))
 
-(defgeneric send (response))
-
-(defmethod send (response)
-  (let ((content (content response)))
-    (if (and (within-request-p) (boundp '*reply*))
-        (set-reply response)
-        (format t "~&Return code: ~a~%" (status response)))
-    content))
-
-(defmethod content (response)
-  (format nil "Hello, ~a!" (gensym "WORLD")))
+(defmethod send :before (response)
+  (if (and (within-request-p)
+           (boundp '*reply*))
+      (set-reply response)
+      (format t "~&Server headless response # ~a~&~%" (status response))))
 
 (defclass response ()
   ((status :initarg :status :accessor status :initform +http-ok+)
@@ -57,7 +46,7 @@
 
 (defclass text-response (response)
   ((content-type :initarg :content-type :accessor content-type :initform "text/plain")
-   (content :initarg :content :accessor content :initform "Hello, world!")))
+   (content :initarg :content :accessor content :initform nil)))
 
 (defclass json-response (text-response)
   ((content-type :initform "application/json")))
@@ -68,9 +57,9 @@
 ;;; HTML response
 
 (defclass html-response (text-response)
-  ((title :initarg :title :accessor title :initform "Hello, world!")
+  ((title :initarg :title :accessor title :initform (default-server-message))
    (content-type :initform "text/html")
-   (content :initform "<h1>Hello, world!</h1><p>I'm a <i>markup</i>.</p>")
+   (content :initform (join "<span>" (default-server-message) "</span>"))
    (meta-content :initarg :meta :accessor meta-content :initform nil)
    (style :initarg :style :accessor style :initform nil)
    (script :initarg :script :accessor script :initform nil)
@@ -82,7 +71,10 @@
 (defgeneric format-html-script (html-response))
 
 (defmethod content :around ((response html-response))
-    (format nil "<!DOCTYPE html><html><head><title>~a</title>~{~a~}</head><body>~a</body></html>"
+    (format nil (join "<!DOCTYPE html><html>"
+                      "<head><title>~a</title>~{~a~}</head>"
+                      "<body>~a</body>"
+                      "</html>")
             (title response)
             (append (iter (for x in (adjoin '("/favicon.ico"
                                               :rel "shortcut icon"
