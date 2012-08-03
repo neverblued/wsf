@@ -15,7 +15,7 @@
    #:respond #:default-response #:failure-response
    #:*server* #:*request* #:with-server
                                         ; lisp
-   #:lisp-server #:server-system #:server-package
+   #:lisp-server #:server-system #:server-package #:with-server-package
                                         ; docroot
    #:docroot-server #:server-pathname #:from-docroot
    #:docroot/ #:text-docroot/

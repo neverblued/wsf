@@ -35,14 +35,12 @@
                            :clause (lambda ()
                                      ,(if (and (null clause) (null link))
                                           nil
-                                          (let ((clause (or clause
-                                                            (awith link
-                                                              (when (stringp it)
-                                                                `(string= ,it
-                                                                          (script-name*)))))))
+                                          (awith (or clause
+                                                     (awith link
+                                                       `(string= ,it (script-name*))))
                                             (if clause-with-scope
-                                                `(with-scope ,scope ,clause)
-                                                clause))))
+                                                `(with-scope ,scope ,it)
+                                                it))))
                            :action (lambda ()
                                      (with-scope ,scope
                                        (with-pookies ,pookies

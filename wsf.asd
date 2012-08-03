@@ -9,7 +9,7 @@
 
 (defsystem #:wsf
   :description "Web Site Framework"
-  :version "0.4"
+  :version "0.5"
   :author "Дмитрий Пинский <demetrius@neverblued.info>"
   :licence "LLGPL"
   :depends-on (#:hunchentoot #:alexandria #:iterate

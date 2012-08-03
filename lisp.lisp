@@ -8,6 +8,10 @@
 
 (defgeneric server-package (server))
 
+(defmacro with-server-package (server &body body)
+  `(let ((*package* (server-package ,server)))
+     ,@body))
+
 (defclass lisp-server ()
 
   ((system :initarg :system
@@ -16,3 +20,7 @@
 
    (package :initform *package*
             :reader server-package)))
+
+(defmethod respond :around ((this lisp-server) request)
+  (with-server-package this
+    (call-next-method)))
