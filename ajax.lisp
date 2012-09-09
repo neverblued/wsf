@@ -21,8 +21,12 @@
 (defun ajax-parameter (key)
   (getf ajax-parameters key))
 
+(defun ajax-symbol (key)
+  (awhen (ajax-parameter key)
+    (symb (string-upcase it))))
+
 (defun ajax-string (key)
-  (aif (getf ajax-parameters key)
+  (aif (ajax-parameter key)
        it
        ;(format nil "~a" it)
        ;(flexi-streams:octets-to-string it :external-format :utf-8)
@@ -36,6 +40,10 @@
 
 (defun ajax-value (key)
   (safely-read-from-string (ajax-string key)))
+
+(defun ajax-time
+    (key)
+  (timestamp-js-to-universal (ajax-value key)))
 
 (let ((prefix "/ajax/")
       (response

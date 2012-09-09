@@ -16,6 +16,7 @@
    #:*server* #:*request* #:with-server
                                         ; lisp
    #:lisp-server #:server-system #:server-package #:with-server-package
+   #:reload-system
                                         ; docroot
    #:docroot-server #:server-pathname #:from-docroot
    #:docroot/ #:text-docroot/
@@ -40,5 +41,6 @@
    #:set-special-link #:another-link #:original-link
                                         ; ajax
    #:set-route-ajax #:ajax? #:ajax-win #:ajax-fail
-   #:ajax-action #:ajax-parameters #:ajax-parameter #:ajax-string #:ajax-keyword #:ajax-value
+   #:ajax-action #:ajax-parameters #:ajax-parameter
+   #:ajax-string #:ajax-keyword #:ajax-value #:ajax-time #:ajax-symbol
    ))

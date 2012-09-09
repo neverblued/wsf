@@ -24,3 +24,8 @@
 (defmethod respond :around ((this lisp-server) request)
   (with-server-package this
     (call-next-method)))
+
+(defun reload-system ()
+  (awhen *server*
+    (awith (server-system it)
+      (asdf:load-system it))))
