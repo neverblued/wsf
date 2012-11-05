@@ -8,6 +8,12 @@
 
 (defparameter server-charset :utf-8)
 
+;(defmacro catch-server-conditions (&body body)
+;  `(handler-case (progn ,@body)
+;     (hunchentoot-simple-warning ()
+;       (print "it's a hunchentoot warning!"))))
+
 (defmethod respond :around ((server website) request)
   (let ((*hunchentoot-default-external-format* (charset-instance server-charset)))
+    ;(catch-server-conditions
     (call-next-method)))
