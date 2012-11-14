@@ -38,6 +38,9 @@
     (awith (ajax-string key)
       (name-keyword it))))
 
+(defun ajax-boolean (key)
+  (eql :true (ajax-keyword key)))
+
 (defun ajax-value (key)
   (safely-read-from-string (ajax-string key)))
 

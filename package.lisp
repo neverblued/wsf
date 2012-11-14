@@ -39,8 +39,16 @@
    #:link #:broken-link #:make-link
                                         ; links
    #:set-special-link #:another-link #:original-link
+
                                         ; ajax
    #:set-route-ajax #:ajax? #:ajax-win #:ajax-fail
    #:ajax-action #:ajax-parameters #:ajax-parameter
-   #:ajax-string #:ajax-keyword #:ajax-value #:ajax-time #:ajax-symbol
+
+   #:ajax-boolean
+   #:ajax-keyword
+   #:ajax-string
+   #:ajax-symbol
+   #:ajax-time
+   #:ajax-value
+
    ))
