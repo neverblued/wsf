@@ -24,13 +24,17 @@
 
 (defgeneric status (response))
 
+(defun hunchentoot-version ()
+  (slot-value (asdf:find-system "hunchentoot") 'asdf::version))
+
+(defun server-header-message ()
+  (join "WSF over Hunchentoot " (hunchentoot-version)))
+
 (defun set-reply (response)
-  (flet ((hunchentoot-version ()
-           (slot-value (asdf:find-system "hunchentoot") 'asdf::version)))
-    (setf (return-code*) (status response)
-          (reply-external-format*) (charset-instance (charset response))
-          (content-type*) (format-content-type response)
-          (header-out :server) (format nil "WSF over Hunchentoot ~a" (hunchentoot-version)))))
+  (setf (return-code*) (status response)
+        (reply-external-format*) (charset-instance (charset response))
+        (content-type*) (format-content-type response)
+        (header-out :server) (server-header-message)))
 
 (defmethod send :before (response)
   (if (and (within-request-p)
