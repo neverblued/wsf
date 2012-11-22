@@ -4,6 +4,11 @@
 
 (in-package #:wsf)
 
+(defmethod send :before (response)
+  (if (within-headless-reply?)
+      (format t "~&WSF headless response # ~a~&~%" (status response))
+      (set-reply response)))
+
 (defun string-response (content)
   (make-instance 'text-response :content (join "Ответ сервера: " content)))
 

@@ -15,18 +15,14 @@
 
 (defclass headless-reply (reply) ())
 
-(defmacro with-headless-reply (&body body)
-  `(let ((*reply* (make-instance 'headless-reply)))
-     ,@body))
-
-(defun within-headless-reply? ()
-  (typep *reply* 'headless-reply))
-
 (defun within-http-request? ()
   (and (within-request-p)
        (boundp '*reply*)))
 
-(defmethod send :before (response)
-  (if (within-headless-reply?)
-      (format t "~&WSF headless response # ~a~&~%" (status response))
-      (set-reply response)))
+(defun within-headless-reply? ()
+  (and (boundp '*reply*)
+       (typep *reply* 'headless-reply)))
+
+(defmacro with-headless-reply (&body body)
+  `(let ((*reply* (make-instance 'headless-reply)))
+     ,@body))

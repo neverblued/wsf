@@ -5,11 +5,9 @@
 (in-package #:wsf)
 
 (defun slime-debug? ()
-  (and slime-debug-conditions
-       (or (not (boundp '*reply*))
-           (typep *reply* 'headless-reply))))
+  (and slime-debug-conditions (within-headless-reply?)))
 
-(defmacro with-slime-debug (&body body)
+(defmacro with-slime-debug ((server request) &body body)
   `(let ((hunchentoot::*hunchentoot-stream* *debug-io*))
      (handler-case (progn ,@body)
        ((or warning error wsf-condition)
@@ -17,4 +15,4 @@
          (if (slime-debug?)
              (invoke-debugger condition)
              (throw-response
-              (failure-response server request condition)))))))
+              (failure-response ,server ,request condition)))))))

@@ -25,12 +25,13 @@
 (defun throw-response (response)
   (throw 'response response))
 
+;; (with-slime-debug (server request)
+
 (defmethod respond :around ((server http-server) request)
   (with-http-acceptor server
     (with-http-reply
       (awith (catch 'response
-               (with-slime-debug
-                 (call-next-method)))
+               (call-next-method))
         (send (typecase it
                 (response it)
                 (string (string-response it))
