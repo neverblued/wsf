@@ -31,6 +31,7 @@
                                         ; http
    #:http-server #:server-domain #:server-port #:stop&start #:online?
    #:throw-response #:robot? #:assert-session
+   #:within-headless-reply?
                                         ; pookies
    #:pookies #:pookie-origin
                                         ; route

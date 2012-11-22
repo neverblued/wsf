@@ -40,6 +40,6 @@
   ;(start server)
   t)
 
-(defmacro with-http-acceptor (server &body body)
-  `(let ((*acceptor* (server-acceptor ,server)))
+(defmacro with-http-acceptor (&body body)
+  `(let ((*acceptor* (server-acceptor *server*)))
      ,@body))

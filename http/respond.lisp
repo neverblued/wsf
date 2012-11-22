@@ -15,24 +15,31 @@
 
 ;; request
 
+(defun within-http-request? ()
+  (and (within-request-p)
+       (boundp '*reply*)))
+
 (defmacro with-http-reply (&body body)
-  `(if (within-http-request?)
-       (if (within-headless-reply?)
-           (progn ,@body)
-           (with-http-session ,@body))
-       (with-headless-reply ,@body)))
+  `(with-http-acceptor
+     (if (within-http-request?)
+         (if (within-headless-reply?)
+             (progn ,@body)
+             (with-http-session ,@body))
+         (with-headless-reply ,@body))))
 
 (defun throw-response (response)
   (throw 'response response))
 
 (defmethod respond :around ((server http-server) request)
-  (with-server-request (server request)
-    (with-http-acceptor server
-      (with-http-reply
-        (awith (catch 'response
-                 (with-trivial-handlers
+  (handler-case
+      (with-server-request (server request)
+        (with-http-reply
+          (awith (catch 'response
+                   (with-trivial-handlers
                      (call-next-method)))
-          (send (typecase it
-                  (response it)
-                  (string (string-response it))
-                  (t (default-response server request)))))))))
+            (send (typecase it
+                    (response it)
+                    (string (string-response it))
+                    (t (default-response server request)))))))
+    (error (condition)
+      (format t "HTTP respond error: ~a" condition))))

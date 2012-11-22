@@ -7,6 +7,7 @@
 (defun uri-http-request (uri)
   (make-instance 'request
                  :acceptor *acceptor*
+                 :content-stream *debug-io*
                  :server-protocol :HTTP/1.1
                  :method :get
                  :remote-addr "0.0.0.0"
@@ -14,10 +15,6 @@
                  :uri uri))
 
 (defclass headless-reply (reply) ())
-
-(defun within-http-request? ()
-  (and (within-request-p)
-       (boundp '*reply*)))
 
 (defun within-headless-reply? ()
   (and (boundp '*reply*)
