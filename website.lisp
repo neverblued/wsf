@@ -17,3 +17,9 @@
   (let ((*hunchentoot-default-external-format* (charset-instance server-charset)))
     ;(catch-server-conditions
     (call-next-method)))
+
+(defparameter error-pages-folder-pathname "view/page/error")
+
+(defmethod initialize-instance :after ((server website) &key)
+  (setf (acceptor-error-template-directory (server-acceptor server))
+        (from-docroot server error-pages-folder-pathname "/")))

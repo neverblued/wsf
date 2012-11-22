@@ -48,6 +48,10 @@
   (pushnew acceptor acceptors)
   (start acceptor))
 
+;(defmethod acceptor-status-message
+;    ((acceptor acceptor) http-status-code
+;     &rest properties &key &allow-other-keys)
+
 ;; stop & start
 
 (defun stop&start (acceptor)

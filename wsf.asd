@@ -9,7 +9,7 @@
 
 (defsystem #:wsf
   :description "Web Site Framework"
-  :version "0.5"
+  :version "0.6"
   :author "Дмитрий Пинский <demetrius@neverblued.info>"
   :licence "LLGPL"
   :depends-on (#:hunchentoot #:alexandria #:iterate
@@ -32,6 +32,11 @@
                         :components ((:file "config")
                                      (:file "acceptor")
                                      (:file "server")
+                                     (:file "headless")
+                                     (:file "response")
+                                     (:file "session")
+                                     (:file "respond")
+                                     (:file "debug")
                                      (:file "robot")))
 
                (:file "pookies")

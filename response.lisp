@@ -36,12 +36,6 @@
         (content-type*) (format-content-type response)
         (header-out :server) (server-header-message)))
 
-(defmethod send :before (response)
-  (if (and (within-request-p)
-           (boundp '*reply*))
-      (set-reply response)
-      (format t "~&Server headless response # ~a~&~%" (status response))))
-
 (defclass response ()
   ((status :initarg :status :accessor status :initform +http-ok+)
    (charset :initarg :charset :accessor charset :initform :utf-8)))
