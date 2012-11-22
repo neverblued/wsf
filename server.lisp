@@ -17,7 +17,11 @@
   `(let ((*server* ,server))
      ,@body))
 
+(defmacro with-server-request ((server request) &body body)
+  `(let* ((*server* ,server)
+          (*request* ,request))
+     ,@body))
+
 (defmethod respond :around (server request)
-  (let* ((*server* server)
-         (*request* request))
+  (with-server-request (server request)
     (call-next-method)))

@@ -7,7 +7,7 @@
 (defun slime-debug? ()
   (and slime-debug-conditions (within-headless-reply?)))
 
-(defmacro with-slime-debug ((server request) &body body)
+(defmacro with-trivial-handlers (&body body)
   `(let ((hunchentoot::*hunchentoot-stream* *debug-io*))
      (handler-case (progn ,@body)
        ((or warning error wsf-condition)
@@ -15,4 +15,4 @@
          (if (slime-debug?)
              (invoke-debugger condition)
              (throw-response
-              (failure-response ,server ,request condition)))))))
+              (failure-response *server* *request* condition)))))))
