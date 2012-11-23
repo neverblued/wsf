@@ -33,6 +33,12 @@
        ;(babel:octets-to-string it :encoding :utf-8)
        ""))
 
+(defun ajax-null-string (key)
+  (awith (ajax-string key)
+    (if (string= "" it)
+        :null
+        it)))
+
 (defun ajax-keyword (key)
   (when (ajax-parameter key)
     (awith (ajax-string key)

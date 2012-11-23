@@ -48,6 +48,7 @@
    #:ajax-boolean
    #:ajax-keyword
    #:ajax-string
+   #:ajax-null-string
    #:ajax-symbol
    #:ajax-time
    #:ajax-value
