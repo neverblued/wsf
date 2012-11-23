@@ -37,7 +37,7 @@
 (defmethod initialize-instance :after ((server http-server) &key)
   (setf (server-acceptor server)
         (fetch-acceptor server))
-  ;(start server)
+  ;(start server) @fixme
   t)
 
 (defmacro with-http-acceptor (&body body)

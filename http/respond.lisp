@@ -27,19 +27,20 @@
              (with-http-session ,@body))
          (with-headless-reply ,@body))))
 
+(defmacro assure-response ((server request) &body body)
+  `(awith (catch 'response ,@body)
+     (typecase it
+       (response it)
+       (string (string-response it))
+       (t (default-response ,server ,request)))))
+
 (defun throw-response (response)
   (throw 'response response))
 
 (defmethod respond :around ((server http-server) request)
-  (handler-case
-      (with-server-request (server request)
-        (with-http-reply
-          (awith (catch 'response
-                   (with-trivial-handlers
-                     (call-next-method)))
-            (send (typecase it
-                    (response it)
-                    (string (string-response it))
-                    (t (default-response server request)))))))
-    (error (condition)
-      (format t "HTTP respond error: ~a" condition))))
+  (with-server-request (server request)
+    (with-http-reply
+      (awith (assure-response (server request)
+               (with-trivial-handlers
+                 (call-next-method)))
+        (send it)))))

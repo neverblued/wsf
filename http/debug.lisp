@@ -15,5 +15,5 @@
          (condition)
        (if (slime-debug?)
            (invoke-debugger condition)
-           (throw-response
-            (failure-response *server* *request* condition))))))
+           (awith (failure-response *server* *request* condition)
+             (throw-response it))))))
