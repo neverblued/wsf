@@ -12,3 +12,11 @@
                    (if (> ,limit (length it))
                        it
                        (subseq it 0 (1- ,limit))))))))
+
+(defmacro lambda-keys ((&rest args) &body body)
+  (if (null args)
+      `(lambda (&key)
+         ,@body)
+       `(lambda (&key ,@args &allow-other-keys)
+          (declare (ignorable ,@args))
+          ,@body)))

@@ -54,28 +54,27 @@
     (key)
   (timestamp-js-to-universal (ajax-value key)))
 
-(let ((prefix "/ajax/")
-      (response
-       `(make-instance 'text-response
-                       :content (jsun::encode
-                                 (catch 'ajax-response
-                                   (handler-case (ajax-win (call-next-route))
-                                     (warning (condition)
-                                       (muffle-warning condition))
-                                     (error (condition)
-                                       (ajax-fail condition))))))))
+(let* ((prefix "/ajax/")
+       (content `(jsun::encode
+                  (catch 'ajax-response
+                    (handler-case (ajax-win (call-next-route))
+                      (warning (condition)
+                        (muffle-warning condition))
+                      (error (condition)
+                        (ajax-fail condition))))))
+       (response `(make-instance 'text-response :content ,content)))
 
-  (defmacro set-route-ajax (&key (uri prefix) follow)
-    (once-only (uri)
-      `(set-route :ajax
-                  :follow ,follow
-                  :args (action-name)
-                  :link (join ,uri action-name)
-                  :clause (begins-with? (script-name*) ,uri)
-                  :scope ((action-name (trim-left ,uri (script-name*))))
-                  :action (let ((ajax? t)
-                                (ajax-action (name-keyword action-name))
-                                (ajax-parameters (iter (for prm in (post-parameters*))
-                                                       (collect (name-keyword (car prm)))
-                                                       (collect (cdr prm)))))
-                            ,response)))))
+  (defmacro defroute-ajax (router &key (uri prefix) (follow t))
+    (once-only (router uri)
+      `(defroute (,router :ajax :follow ,follow)
+           :args (action-name)
+           :link (join ,uri action-name)
+           :clause (begins-with? (script-name*) ,uri)
+           :scope ((action-name (trim-left ,uri (script-name*))))
+           :action (let ((ajax? t)
+                         (ajax-action (name-keyword action-name))
+                         (ajax-parameters (iter
+                                            (for prm in (post-parameters*))
+                                            (collect (name-keyword (car prm)))
+                                            (collect (cdr prm)))))
+                     ,response)))))

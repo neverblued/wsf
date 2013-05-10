@@ -8,10 +8,7 @@
 (in-package #:wsf-system)
 
 (defsystem #:wsf
-  :description "Web Site Framework"
   :version "0.8"
-  :author "Дмитрий Пинский <demetrius@neverblued.info>"
-  :licence "LLGPL"
   :depends-on (#:hunchentoot #:alexandria #:iterate
                #:blackjack #:jsun)
   :serial t

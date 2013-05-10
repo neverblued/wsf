@@ -5,8 +5,8 @@
 (in-package #:wsf)
 
 (defclass route ()
-  ((name :initarg :name :accessor route-name)
-   (follow :initarg :follow :accessor route-follow)
+  ((name :initarg :name :accessor route-name :initform nil)
+   (follow :initarg :follow :accessor route-follow :initform nil)
    (args :initarg :args :accessor route-args :initform nil)
    (clause :initarg :clause :accessor route-clause)
    (action :initarg :action :accessor route-action)

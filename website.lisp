@@ -23,3 +23,16 @@
 (defmethod initialize-instance :after ((server website) &key)
   (setf (acceptor-error-template-directory (server-acceptor server))
         (from-docroot server error-pages-folder-pathname "/")))
+
+(defmacro defsite (name (&rest superclasses) &rest args)
+  `(progn
+
+     (defclass ,name (,@superclasses wsf:website) ())
+
+     (defvar ,name
+       (make-instance ',name ,@args))
+
+     (setf *server* (symbol-value ',name))
+
+     (define-symbol-macro docroot
+         (from-docroot (symbol-value ',name)))))

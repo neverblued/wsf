@@ -4,6 +4,8 @@
 
 (in-package #:wsf)
 
+(defgeneric respond-page (name &rest args))
+
 (defgeneric content (response))
 
 (defgeneric send (response))

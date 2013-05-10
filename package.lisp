@@ -7,6 +7,8 @@
         #:blackjack)
   (:shadow #:acceptor #:content-type)
   (:export
+                                        ; api
+   #:defsite #:defroute #:defroute-ajax #:respond-page
                                         ; website
    #:website
 
