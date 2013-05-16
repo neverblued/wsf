@@ -12,6 +12,9 @@
           (if (begins-with? it "/") "" "/")
           it)))
 
+(define-symbol-macro docroot
+    (from-docroot *server*))
+
 (defun docroot/ (&rest relative-path-chunks)
   (apply #'from-docroot *server* relative-path-chunks))
 

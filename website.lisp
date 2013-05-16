@@ -32,7 +32,4 @@
      (defvar ,name
        (make-instance ',name ,@args))
 
-     (setf *server* (symbol-value ',name))
-
-     (define-symbol-macro docroot
-         (from-docroot (symbol-value ',name)))))
+     (setf *server* (symbol-value ',name))))
