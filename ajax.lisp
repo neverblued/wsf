@@ -50,8 +50,7 @@
 (defun ajax-value (key)
   (safely-read-from-string (ajax-string key)))
 
-(defun ajax-time
-    (key)
+(defun ajax-time (key)
   (timestamp-js-to-universal (ajax-value key)))
 
 (let* ((prefix "/ajax/")
