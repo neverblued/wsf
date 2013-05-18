@@ -21,6 +21,7 @@
    #:reload-system
                                         ; docroot
    #:docroot-server #:server-pathname #:from-docroot
+   #:server-data-pathname-format
    #:docroot #:docroot/ #:text-docroot/
    #:define-file-datum #:load-file-datum
                                         ; parse
