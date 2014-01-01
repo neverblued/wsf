@@ -1,5 +1,4 @@
-;; (c) Дмитрий Пинский <demetrius@neverblued.info>
-;; Допускаю использование и распространение согласно
+;; (c) www.neverblued.info
 ;; LLGPL -> http://opensource.franz.com/preamble.html
 
 (defpackage #:wsf
@@ -22,7 +21,7 @@
                                         ; docroot
    #:docroot-server #:server-pathname #:from-docroot
    #:server-data-pathname-format
-   #:docroot #:docroot/ #:text-docroot/
+   #:docroot #:docroot/ #:text-docroot/ #:list-docroot/
    #:define-file-datum #:load-file-datum
                                         ; parse
    #:parse-server #:server-parsers #:ranked-parsers #:parse

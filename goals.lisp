@@ -1,3 +1,6 @@
+;; (c) www.neverblued.info
+;; LLGPL -> http://opensource.franz.com/preamble.html
+
 (in-package :wsf)
 
 (defclass goal ()

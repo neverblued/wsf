@@ -1,5 +1,4 @@
-;; (c) Дмитрий Пинский <demetrius@neverblued.info>
-;; Допускаю использование и распространение согласно
+;; (c) www.neverblued.info
 ;; LLGPL -> http://opensource.franz.com/preamble.html
 
 (in-package #:wsf)
@@ -20,6 +19,9 @@
 
 (defun text-docroot/ (&rest relative-path-chunks)
   (pathname-content (apply #'docroot/ relative-path-chunks)))
+
+(defun list-docroot/ (&rest relative-path-chunks)
+  (eval-list (load-from-file (apply #'docroot/ relative-path-chunks))))
 
 (defclass docroot-server (lisp-server)
   ((data-pathname-format :initarg :data-pathname-format

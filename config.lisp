@@ -1,5 +1,4 @@
-;; (c) Дмитрий Пинский <demetrius@neverblued.info>
-;; Допускаю использование и распространение согласно
+;; (c) www.neverblued.info
 ;; LLGPL -> http://opensource.franz.com/preamble.html
 
 (in-package #:wsf)
