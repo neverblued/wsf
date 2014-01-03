@@ -22,7 +22,7 @@
    #:docroot-server #:server-pathname #:from-docroot
    #:server-data-pathname-format
    #:docroot #:docroot/ #:text-docroot/ #:list-docroot/
-   #:define-file-datum #:load-file-datum
+   #:define-file-datum #:load-file-datum #:defile
                                         ; parse
    #:parse-server #:server-parsers #:ranked-parsers #:parse
    #:regex-parser

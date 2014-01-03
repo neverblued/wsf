@@ -53,4 +53,13 @@
               (setf result (progn ,@body))
               (setf ,',cache it)
               (,',validator)
-              result))))))
+              result)))
+
+       (ignore-errors
+         (define-symbol-macro ,name
+             (,source))))))
+
+(defmacro defile (&rest names)
+  `(progn ,@(iter (for name in names)
+                  (collect
+                      `(define-file-datum ,name)))))
